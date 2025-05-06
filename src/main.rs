@@ -42,7 +42,7 @@ struct Args {
     #[arg(required = true, value_parser = validate_src)]
     src: String,
 
-    /// 目标路径（区分文件拓展名） (optional)
+    /// 目标路径，可选，区分文件拓展名，为空则以自动<SRC>路径名称填充
     dst: Option<String>,
 
     /// 自动保留src的文件拓展名到dst。保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
