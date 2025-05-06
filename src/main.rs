@@ -49,9 +49,11 @@ struct Args {
     #[arg(short, long)]
     keep_extention: bool,
 
+    /// 只输出warn与error level的日志
     #[arg(short, long)]
     quiet: bool,
 
+    /// 输出debug level的日志
     #[arg(long)]
     debug: bool,
 }
