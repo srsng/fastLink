@@ -105,12 +105,8 @@ fn main() {
 
     init_log(args.quiet, args.debug);
     log::debug!("{:?}", args);
-
+    special_warn(&args);
     let keep_extention = args.keep_extention;
-
-    if keep_extention && args.dst.is_none() {
-        log::warn!("不给定[DST]的同时使用-k，通常会因该目录下已有同名文件而创建失败！");
-    }
 
     // 规范化src
     let src_abs_res = dunce::canonicalize(&args.src);
@@ -144,6 +140,28 @@ fn main() {
             mklink(src_abs, dst_abs);
         }
     };
+}
+
+/// 对一些特殊情况进行警告
+fn special_warn(args: &Args) {
+    let src = &args.src;
+    let dst = &args.dst;
+    let keep_extention = args.keep_extention;
+
+    if keep_extention && dst.is_none() {
+        log::warn!("不给定[DST]的同时使用-k，通常会因该目录下已有同名文件而创建失败！");
+    }
+
+    if src == "." && dst.is_none() {
+        log::warn!("这样做会在当前目录创建，对该目录本身的符号链接，如果你不清楚自己这样做的后果，请不要这么做!（这个时候可能已经创建成功了，那么就快点删除它！）")
+    }
+
+    // if src == ".." && !dst.is_none() {
+    //     let dst = Path::new(dst.unwrap());
+    //     if dst.is_relative() {
+    //         log::warn!("这样做会在当前目录创建，对该目录的父目录的符号链接，如果你不清楚自己这样做的后果，请不要这么做!（这个时候可能已经创建成功了，那么就快点删除它！）")
+    //     }
+    // }
 }
 
 /// 判断dst所在目录是否存在，若不存在，则为其创建，并警告
