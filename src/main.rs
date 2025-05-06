@@ -108,11 +108,15 @@ fn main() {
 
     let keep_extention = args.keep_extention;
 
+    if keep_extention && args.dst.is_none() {
+        log::warn!("不给定[DST]的同时使用-k，通常会因该目录下已有同名文件而创建失败！");
+    }
+
     // 规范化src
     let src_abs_res = dunce::canonicalize(&args.src);
     if src_abs_res.is_err() {
         log::error!(
-            "请检查<SRC>是否存在. Fail to canonicalize <SRC>: {}",
+            "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>",
             &args.src
         );
         return;
