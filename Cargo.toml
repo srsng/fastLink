@@ -1,6 +1,9 @@
 [package]
 name = "fastLink"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
+clap = {version = "4.5.37", features = ["derive"]}
+env_logger = "0.11.8"
+log = "0.4.27"
