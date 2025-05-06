@@ -223,7 +223,7 @@ fn default_dst_path(src: &Path) -> PathBuf {
 
     // 输出日志信息
     log::info!(
-        "已由src确定目标名 {} → {}",
+        "已由<SRC>确定目标名 {} → {}",
         src.display(),
         base_name.to_string_lossy()
     );
@@ -249,7 +249,7 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
                         src_ext.to_string_lossy()
                     );
                     dst.set_file_name(new_name);
-                    log::info!("get extension `{}` from src", src_ext.to_string_lossy());
+                    log::info!("get extension `.{}` from <SRC>", src_ext.to_string_lossy());
                 }
             }
         }
