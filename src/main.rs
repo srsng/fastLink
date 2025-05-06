@@ -1,10 +1,12 @@
-// use log::info;
-// use clap::builder::Str;
+use clap::builder::styling::Color;
+use clap::builder::styling::RgbColor;
+use clap::builder::styling::Style;
 use clap::Parser;
-use std::env;
+use path_clean::PathClean;
 use std::ffi::OsStr;
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::os::windows::fs::{symlink_dir, symlink_file};
 use std::path::{Path, PathBuf};
 
@@ -24,57 +26,171 @@ use std::path::{Path, PathBuf};
 // // windows隐藏命令行窗口参数
 // const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(
     version,
     about = "A tool to make symlink fastly and smartly",
     long_about = r#"
 Example：
   fastlink document.txt
-  fastlink image.jpg backup -k
-  fastlink data.csv /tmp/output --keep-name
+  fastlink image.jpg img-link -k
+  fastlink data.csv /tmp/output --keep-extention
 "#
 )]
 struct Args {
-    /// Source file or directory
-    #[arg(required = true)]
+    /// 源文件/源目录路径
+    #[arg(required = true, value_parser = validate_src)]
     src: String,
 
-    /// Destination path (optional)
+    /// 目标路径（区分文件拓展名） (optional)
     dst: Option<String>,
 
-    /// 是否保留src的文件拓展名
+    /// 自动保留src的文件拓展名到dst。保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
     #[arg(short, long)]
     keep_extention: bool,
 
     #[arg(short, long)]
     quiet: bool,
+
+    #[arg(long)]
+    debug: bool,
 }
 
-fn init_log(quiet: bool) {
+fn validate_src(s: &str) -> Result<String, String> {
+    let path = Path::new(s).clean();
+
+    if s.trim().is_empty() {
+        Err("路径不能为空或纯空格".into())
+    } else if path.components().count() == 0 {
+        Err("无效的路径格式".into())
+    } else {
+        Ok(s.into())
+    }
+}
+
+fn init_log(quiet: bool, debug: bool) {
     // 初始化日志系统
-    env_logger::Builder::new()
+    let mut builder = env_logger::Builder::new();
+    builder
+        .format(|buf, record| {
+            let time = chrono::Local::now().format("%H:%M:%S");
+            let level = record.level();
+            let level_style = buf.default_level_style(level);
+
+            // 设置时间颜色（灰色）
+            let time_style = Style::new().fg_color(Some(Color::Rgb(RgbColor(150, 150, 150))));
+
+            // 格式化输出
+            writeln!(
+                buf,
+                "{time_style}{time}{time_style:#} {level_style}{level}{level_style:#} {}",
+                record.args()
+            )
+        })
         .filter_level(if quiet {
             log::LevelFilter::Off
+        } else if debug {
+            log::LevelFilter::Debug
         } else {
             log::LevelFilter::Info
         })
         .init();
+    log::debug!("log init.")
 }
 
 fn main() {
     let args = Args::parse();
 
-    init_log(args.quiet);
+    init_log(args.quiet, args.debug);
+    log::debug!("{:?}", args);
+
     let keep_extention = args.keep_extention;
 
-    let src_path = PathBuf::from(&args.src);
-    let dst_path = parse_args_dst(&args.src, args.dst.as_deref(), keep_extention);
+    // 规范化src
+    let src_abs_res = dunce::canonicalize(&args.src);
+    if src_abs_res.is_err() {
+        log::error!(
+            "请检查<SRC>是否存在. Fail to canonicalize <SRC>: {}",
+            &args.src
+        );
+        return;
+    }
+    let src_abs = src_abs_res.unwrap();
 
-    let src_abs = canonicalize_path(&src_path);
-    let dst_abs = canonicalize_path(&dst_path);
+    // 解析dst
+    let dst_path = parse_args_dst(&args.src, args.dst.as_deref(), keep_extention).clean();
 
-    mklink(src_abs, dst_abs);
+    // 验证dst路径父目录
+    match validate_dst(&dst_path) {
+        Err(e) => {
+            log::error!(
+                "[DST]父目录不存在，且创建失败，请尝试手动创建或修改路径: \n{}",
+                e
+            );
+        }
+        Ok(_) => {
+            // 规范化dst，失败则跳过
+            let dst_abs_res = dunce::canonicalize(&dst_path);
+            let dst_abs = match dst_abs_res {
+                Ok(path) => path,
+                Err(_e) => dst_path,
+            };
+            mklink(src_abs, dst_abs);
+        }
+    };
+}
+
+/// 判断dst所在目录是否存在，若不存在，则为其创建，并警告
+fn validate_dst(dst: &Path) -> Result<(), String> {
+    log::debug!("validate_dst/dst: {}", dst.display());
+
+    let dst = canonicalize_path(dst);
+    let dst_parent_option = dst.parent().take();
+    // dst父目录不存在
+    if dst_parent_option.is_some() && !dst_parent_option.unwrap().exists() {
+        let dst_parent = dst_parent_option.unwrap().clean();
+        // 创建目录并处理错误
+        match mkdirs(&dst_parent) {
+            Ok(_) => {
+                log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
+                Ok(())
+            }
+            Err(e) => Err(format!(
+                "[DST]父目录: {} \nErrorMsg: {}",
+                dst_parent.display(),
+                e
+            )),
+        }
+
+        // 规范化dst_parent
+        // let dst_parent_res = dunce::canonicalize(&dst_parent);
+        // // unused variable
+        // let _dst_parent = match dst_parent_res {
+        //     Ok(_dst_parent) => _dst_parent,
+        //     // 失败则只警告, 保持dst_parent不变
+        //     Err(e) => {
+        //         log::warn!(
+        //             "Fail to canonicalize [DST] parent dir: {}\n{}",
+        //             dst_parent.display(),
+        //             e
+        //         );
+        //         dst_parent
+        //     }
+        // }
+        // .clean();
+        // log::debug!("validate_dst/dst_parent: {}", dst_parent.display());
+    } else {
+        Ok(())
+    }
+}
+
+/// 创建目录
+fn mkdirs(path: &Path) -> Result<(), String> {
+    let res = std::fs::create_dir_all(path);
+    match res {
+        Err(e) => Err(format!("{}", e)),
+        _ => Ok(()),
+    }
 }
 
 fn parse_args_dst(src: &str, dst: Option<&str>, keep_extention: bool) -> PathBuf {
@@ -94,7 +210,7 @@ fn parse_args_dst(src: &str, dst: Option<&str>, keep_extention: bool) -> PathBuf
 fn default_dst_path(src: &Path) -> PathBuf {
     let base_name = src.file_stem().unwrap_or_else(|| {
         src.file_name().unwrap_or_else(|| {
-            log::warn!("未知错误：src文件名为空，已设置dst名称为unnamed-fastlink");
+            log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
             OsStr::new("unnamed-fastlink")
         })
     });
@@ -127,7 +243,7 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
                         src_ext.to_string_lossy()
                     );
                     dst.set_file_name(new_name);
-                    log::info!("get extension {} from src", src_ext.to_string_lossy());
+                    log::info!("get extension `{}` from src", src_ext.to_string_lossy());
                 }
             }
         }
@@ -137,26 +253,23 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
 /// 路径规范化
 fn canonicalize_path(path: &Path) -> PathBuf {
     if path.is_absolute() {
-        path.to_path_buf()
+        path.to_path_buf().clean()
     } else {
-        env::current_dir()
+        std::env::current_dir()
             .expect("Failed to get current directory")
-            .join(path)
+            .join(path.clean())
     }
 }
 
 fn mklink(src: PathBuf, dst: PathBuf) {
+    log::info!(
+        "符号链接创建中: New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
+        src.display(),
+        dst.display(),
+    );
+
     match create_symlink(&src, &dst) {
-        Ok(_) => log::info!(
-            "符号链接创建成功\n
-src: {}
-dst: {}\n
-New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
-            src.display(),
-            dst.display(),
-            dst.display(),
-            src.display()
-        ),
+        Ok(_) => log::info!("符号链接创建成功"),
         Err(e) => log::error!("符号链接创建失败: {}", e),
     }
 }
