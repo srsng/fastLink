@@ -6,15 +6,15 @@ on:
   pull_request:
     branches: [ "master" ]
   release:
-    types: [created]
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   ci-checks:
-    if: github.event_name != 'release'
     name: CI Checks
+    if: github.event_name != 'release'
     runs-on: windows-latest 
     steps:
     - name: Checkout code
@@ -41,6 +41,10 @@ jobs:
   release-build:
       name: Release Build
       if: github.event_name == 'release'
+      permissions:
+        contents: write
+        actions: read
+        checks: write
       runs-on: windows-latest
       steps:
       - name: Checkout code
@@ -58,11 +62,11 @@ jobs:
           $version = ($env:GITHUB_REF -replace "refs/tags/", "") -replace "^v", ""
           mkdir release -Force
           Copy-Item target/release/*.exe release/
-          Compress-Archive -Path release/* -DestinationPath "app-$version-windows-x64.zip"
+          Compress-Archive -Path release/* -DestinationPath "fastLink-$version-windows-x64.zip"
   
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: app-*-windows-x64.zip
+          files: fastLink-*-windows-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
