@@ -413,10 +413,11 @@ mod test {
         // block: dst not None, relative path
         {
             let some_dst = Some(r"..\some_name");
+            let cur_path = std::env::current_dir().expect("Failed to get current directory");
 
-            let dir_tar = PathBuf::from(r"..\some_name");
-            let file_tar_k_t = PathBuf::from(r"..\some_name.exe");
-            let file_tar_k_f = PathBuf::from(r"..\some_name");
+            let dir_tar = cur_path.join(PathBuf::from(r"..\some_name"));
+            let file_tar_k_t = cur_path.join(PathBuf::from(r"..\some_name.exe"));
+            let file_tar_k_f = cur_path.join(PathBuf::from(r"..\some_name"));
 
             // keep_extention true
             assert_eq!(dir_tar, parse_args_dst(dir_abs, some_dst, true));
