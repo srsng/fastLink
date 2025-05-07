@@ -20,6 +20,7 @@ jobs:
       actions: read
       checks: write
     runs-on: windows-latest 
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -27,7 +28,7 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
-    - name: Build 
+    - name: Build
       run: cargo build --verbose
 
     - name: Test
@@ -39,16 +40,13 @@ jobs:
     - name: Clippy
       run: cargo clippy --target x86_64-pc-windows-msvc -- -D warnings
 
-    - name: Generate docs
-      run: cargo doc --no-deps
-
   release-build:
       name: Release Build
-      if: github.event_name == 'release'
+      if: github.event_name == 'release' && github.event.action == 'published'
+
       permissions:
         contents: write
-        actions: read
-        checks: write
+
       runs-on: windows-latest
       steps:
       - name: Checkout code
@@ -60,17 +58,9 @@ jobs:
       - name: Build Release Binary
         run: cargo build --release --verbose
   
-      - name: Package Artifacts
-        shell: pwsh
-        run: |
-          $version = ($env:GITHUB_REF -replace "refs/tags/", "") -replace "^v", ""
-          mkdir release -Force
-          Copy-Item target/release/*.exe release/
-          Compress-Archive -Path release/* -DestinationPath "fastLink-$version-windows-x64.zip"
-  
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: fastLink-*-windows-x64.zip
+          files: target/release/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
