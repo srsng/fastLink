@@ -1,6 +1,4 @@
-use clap::builder::styling::Color;
-use clap::builder::styling::RgbColor;
-use clap::builder::styling::Style;
+use clap::builder::styling::{Color, RgbColor, Style};
 use clap::Parser;
 use path_clean::PathClean;
 use std::ffi::OsStr;
@@ -29,12 +27,21 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about = "A tool to make symlink fastly and smartly",
+    about = "A tool to make symlink fastly and smartly
+一个智能且方便的符号链接创建工具",
     long_about = r#"
 Example：
-  fastlink document.txt
-  fastlink image.jpg img-link -k
-  fastlink data.csv /tmp/output --keep-extention
+    // 在本目录创建一个名为document的符号链接
+    fastlink document.txt
+
+    // 在本目录创建一个名为img-link.jpg的符号链接
+    fastlink image.jpg img-link -k
+
+    // 在本目录的子目录tmp中创建名为output.csv的符号链接，若tmp目录不存在将自动创建并警告
+    fastlink data.csv tmp/output --keep-extention
+
+    // 在本目录的父目录创建名为data符号链接，指向data.csv (不建议, Not Recommended)
+    fastlink data.csv ../
 "#
 )]
 struct Args {
@@ -112,10 +119,11 @@ fn main() {
 
     // 规范化src
     let src_abs_res = dunce::canonicalize(&args.src);
-    if src_abs_res.is_err() {
+    if let Err(e) = src_abs_res {
         log::error!(
-            "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>",
-            &args.src
+            "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>: {}",
+            &args.src,
+            e
         );
         return;
     }
@@ -132,13 +140,14 @@ fn main() {
                 e
             );
         }
-        Ok(_) => {
-            // 规范化dst，失败则跳过
-            let dst_abs_res = dunce::canonicalize(&dst_path);
-            let dst_abs = match dst_abs_res {
-                Ok(path) => path,
-                Err(_e) => dst_path,
-            };
+        Ok(dst_abs) => {
+            log::debug!(
+                "符号链接创建中
+    src: {}
+    dst: {}",
+                src_abs.display(),
+                dst_abs.display()
+            );
             mklink(src_abs, dst_abs);
         }
     };
@@ -174,11 +183,10 @@ fn special_warn(args: &Args) {
 }
 
 /// 判断dst所在目录是否存在，若不存在，则为其创建，并警告
-fn validate_dst(dst: &Path) -> Result<(), String> {
+fn validate_dst(dst: &Path) -> Result<PathBuf, String> {
     log::debug!("validate_dst/dst: {}", dst.display());
 
-    let dst = canonicalize_path(dst);
-    let dst_parent_option = dst.parent().take();
+    let dst_parent_option = dst.parent();
     // dst父目录不存在
     if dst_parent_option.is_some() && !dst_parent_option.unwrap().exists() {
         let dst_parent = dst_parent_option.unwrap().clean();
@@ -186,7 +194,14 @@ fn validate_dst(dst: &Path) -> Result<(), String> {
         match mkdirs(&dst_parent) {
             Ok(_) => {
                 log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
-                Ok(())
+                // 重新组合dst路径
+                let dst_path = if let Some(dst_filename) = dst.file_name() {
+                    dst_parent.join(dst_filename)
+                } else {
+                    dst.to_path_buf()
+                };
+                log::debug!("validate_dst/dst return: {}", dst_path.display());
+                Ok(dst_path)
             }
             Err(e) => Err(format!(
                 "[DST]父目录: {} \nErrorMsg: {}",
@@ -213,7 +228,7 @@ fn validate_dst(dst: &Path) -> Result<(), String> {
         // .clean();
         // log::debug!("validate_dst/dst_parent: {}", dst_parent.display());
     } else {
-        Ok(())
+        Ok(dst.to_path_buf())
     }
 }
 
@@ -226,17 +241,21 @@ fn mkdirs(path: &Path) -> Result<(), String> {
     }
 }
 
+/// 解析dst参数并转化为路径
+/// 为[DST]自动追加<SRC>名称、拓展名都在这实现
 fn parse_args_dst(src: &str, dst: Option<&str>, keep_extention: bool) -> PathBuf {
     let src_path = Path::new(src);
     let mut final_dst = match dst {
         Some(d) => {
+            // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
             let dst_path = Path::new(d);
             if src_path.is_file() && dst_path.is_dir() {
-                dst_path.join(default_dst_path(src_path))
+                canonicalize_path(&dst_path.join(default_dst_path(src_path)))
             } else {
-                PathBuf::from(d)
+                canonicalize_path(&PathBuf::from(d))
             }
         }
+        // 没有传入DST: 使用SRC文件名
         None => default_dst_path(src_path),
     };
 
@@ -302,11 +321,11 @@ fn canonicalize_path(path: &Path) -> PathBuf {
 }
 
 fn mklink(src: PathBuf, dst: PathBuf) {
-    log::info!(
-        "符号链接创建中: New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
-        src.display(),
-        dst.display(),
-    );
+    // log::info!(
+    //     "符号链接创建中: New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
+    //     src.display(),
+    //     dst.display(),
+    // );
 
     match create_symlink(&src, &dst) {
         Ok(_) => log::info!("符号链接创建成功"),
@@ -325,16 +344,12 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Res
     // 根据类型选择创建方式
     if metadata.is_file() {
         symlink_file(src, dst)
-    } else if metadata.is_dir()
-    // && dst
-    //     .map(|d| d.ends_with(std::path::MAIN_SEPARATOR))
-    //     .unwrap_or(false)
-    {
+    } else if metadata.is_dir() {
         symlink_dir(src, dst)
     } else {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "源路径既不是文件也不是目录",
+            "奇怪的错误: <SRC>既不是文件也不是目录",
         ))
     }
 }
