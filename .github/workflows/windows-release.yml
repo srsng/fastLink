@@ -1,0 +1,81 @@
+name: Rust Windows release
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  release:
+    types: [created]
+
+
+jobs:
+  windows-build:
+    if: github.event_name != 'release'
+    name: Windows Build
+    runs-on: windows-latest 
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust (MSVC)
+      uses: actions-rust-lang/setup-rust@v1
+      with:
+        rust-version: stable
+        target: x86_64-pc-windows-msvc
+        components: clippy, rustfmt
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Build with MSVC
+      run: cargo build --verbose
+
+    - name: Run Windows tests
+      run: cargo test --verbose
+
+    - name: Check formatting
+      run: cargo fmt -- --check
+
+    - name: Windows-specific Clippy
+      run: cargo clippy --target x86_64-pc-windows-msvc -- -D warnings
+
+    - name: Generate Windows docs
+      run: cargo doc --no-deps
+
+  release-build:
+      name: Release Build
+      if: github.event_name == 'release'  # 只在发布时运行
+      runs-on: windows-latest
+      needs: windows-build  # 确保先通过测试
+  
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust@v1
+        with:
+          rust-version: stable
+          target: x86_64-pc-windows-msvc
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        
+      - name: Build Release Binary
+        run: cargo build --release --verbose
+  
+      - name: Package Artifacts
+        shell: pwsh
+        run: |
+          $version = ($env:GITHUB_REF -replace "refs/tags/", "") -replace "^v", ""
+          mkdir -Force release | Out-Null
+          Copy-Item target/release/*.exe release/
+          Compress-Archive -Path release/* -DestinationPath "app-$version-windows-x64.zip"
+  
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app-*-windows-x64.zip  # 匹配生成的压缩包
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
