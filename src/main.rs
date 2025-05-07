@@ -42,10 +42,12 @@ struct Args {
     #[arg(required = true, value_parser = validate_src)]
     src: String,
 
-    /// 目标路径，可选，区分文件拓展名，为空则以自动<SRC>路径名称填充
+    /// 目标路径，可选，区分文件拓展名。
+    /// 为空则自动以<SRC>路径名称填充；当<SRC>为文件，[DST]为目录时，自动以<SRC>路径名称填充
     dst: Option<String>,
 
-    /// 自动保留src的文件拓展名到dst。保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
+    /// 自动保留<SRC>的文件拓展名到[DST]。(不会去除)
+    /// 保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
     #[arg(short, long)]
     keep_extention: bool,
 
@@ -145,6 +147,7 @@ fn main() {
 /// 对一些特殊情况进行警告
 fn special_warn(args: &Args) {
     let src = &args.src;
+    let src_path = Path::new(src);
     let dst = &args.dst;
     let keep_extention = args.keep_extention;
 
@@ -156,12 +159,18 @@ fn special_warn(args: &Args) {
         log::warn!("这样做会在当前目录创建，对该目录本身的符号链接，如果你不清楚自己这样做的后果，请不要这么做!（这个时候可能已经创建成功了，那么就快点删除它！）")
     }
 
-    // if src == ".." && !dst.is_none() {
-    //     let dst = Path::new(dst.unwrap());
-    //     if dst.is_relative() {
-    //         log::warn!("这样做会在当前目录创建，对该目录的父目录的符号链接，如果你不清楚自己这样做的后果，请不要这么做!（这个时候可能已经创建成功了，那么就快点删除它！）")
-    //     }
-    // }
+    // dst不为空的情况
+    if let Some(dst) = dst {
+        let dst_path = Path::new(dst);
+
+        if src_path.is_file() && dst_path.is_dir() {
+            log::warn!("<SRC>为文件路径而[DST]为目录路径，将自动使用<SRC>文件名追加到[DST]")
+        }
+
+        // if src == ".." && dst.is_relative() {
+        //     log::warn!("这样做会在当前目录创建，对该目录的父目录的符号链接，如果你不清楚自己这样做的后果，请不要这么做!（这个时候可能已经创建成功了，那么就快点删除它！）")
+        // }
+    }
 }
 
 /// 判断dst所在目录是否存在，若不存在，则为其创建，并警告
@@ -220,7 +229,14 @@ fn mkdirs(path: &Path) -> Result<(), String> {
 fn parse_args_dst(src: &str, dst: Option<&str>, keep_extention: bool) -> PathBuf {
     let src_path = Path::new(src);
     let mut final_dst = match dst {
-        Some(d) => PathBuf::from(d),
+        Some(d) => {
+            let dst_path = Path::new(d);
+            if src_path.is_file() && dst_path.is_dir() {
+                dst_path.join(default_dst_path(src_path))
+            } else {
+                PathBuf::from(d)
+            }
+        }
         None => default_dst_path(src_path),
     };
 
