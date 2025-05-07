@@ -18,10 +18,10 @@ jobs:
     runs-on: windows-latest 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
 
     # - name: Install Rust (MSVC)
-    #   uses: actions-rust-lang/setup-rust@v1
+    #   uses: rust-lang/setup-rust-action@v1
     #   with:
     #     rust-version: stable
     #     target: x86_64-pc-windows-msvc
@@ -53,10 +53,10 @@ jobs:
       
       steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
   
       # - name: Install Rust
-      #   uses: actions-rust-lang/setup-rust@v1
+      #   uses: rust-lang/setup-rust-action@v1
       #   with:
       #     rust-version: stable
       #     target: x86_64-pc-windows-msvc
