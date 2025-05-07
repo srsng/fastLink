@@ -4,6 +4,8 @@ A tool to make symlink fastly and smartly
 
 For Windows
 
+Do not need `sudo` or `administrator` 
+
 ## Usage
 ```cmd
 Usage: fastlink.exe [OPTIONS] <SRC> [DST]
