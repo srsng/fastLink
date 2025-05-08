@@ -204,7 +204,7 @@ fn validate_dst(dst: &Path) -> Result<PathBuf, String> {
                 Ok(dst_path)
             }
             Err(e) => Err(format!(
-                "[DST]父目录: {} \nErrorMsg: {}",
+                "[DST]父目录: {} 创建失败\n\tErrorMsg: {}",
                 dst_parent.display(),
                 e
             )),
@@ -292,10 +292,19 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
             if let Some(file_name) = dst.file_name() {
                 let dst_path = Path::new(file_name);
 
-                // 忽略目录路径（通过原始路径字符串判断）
-                let is_dir = dst.to_string_lossy().ends_with(std::path::MAIN_SEPARATOR);
+                let dst_str = dst.to_str().unwrap_or_default();
 
-                if !is_dir && dst_path.extension().is_none() {
+                // 不用std::path::MAIN_SEPARATOR判断是因为用户经常混用`\`与`/`
+                #[cfg(windows)]
+                let is_dir = dst.is_dir()
+                    || (!dst.to_str().unwrap_or_default().is_empty()
+                        && (dst_str.ends_with('/') || dst_str.ends_with('\\')));
+                #[cfg(not(windows))]
+                let is_dir = dst.is_dir()
+                    || (!dst.to_str().unwrap_or_default().is_empty()
+                        && dst_str.ends_with(std::path::MAIN_SEPARATOR));
+
+                if !is_dir && dst_path.extension().is_none() && !src_ext.is_empty() {
                     let new_name = format!(
                         "{}.{}",
                         dst_path.to_string_lossy(),
@@ -355,8 +364,72 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Res
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_validate_src() {
+        // 有效路径测试
+        assert!(validate_src(r"C:\valid\path").is_ok());
+        assert!(validate_src("test.txt").is_ok());
+        assert!(validate_src(r"..\test.txt").is_ok());
+
+        // 无效路径测试
+        assert!(validate_src("").is_err());
+        assert!(validate_src("   ").is_err());
+    }
+
+    #[test]
+    fn test_validate_dst() {
+        let temp_dir = TempDir::new().unwrap();
+        let base_path = temp_dir.path();
+
+        // 父目录存在的情况
+        let existing_path = base_path.join("existing_dir");
+        fs::create_dir(&existing_path).unwrap();
+        let test_path = existing_path.join("test.txt");
+        assert!(validate_dst(&test_path).is_ok());
+
+        // 需要创建父目录的情况
+        let new_path = base_path.join("new_dir/test.txt");
+        let result = validate_dst(&new_path);
+        assert!(result.is_ok());
+        assert!(new_path.parent().unwrap().exists());
+
+        // 无法创建父目录的情况（例如无权限路径）
+        #[cfg(windows)]
+        let invalid_path = Path::new("C:\\Windows\\System32\\test\\test.txt");
+        #[cfg(not(windows))]
+        let invalid_path = Path::new("/root/test/test.txt");
+        assert!(validate_dst(invalid_path).is_err());
+    }
+
+    #[test]
+    fn test_process_extension() {
+        let mut path = PathBuf::from("test");
+        let src_file = Path::new("source.txt");
+        let src_dir = Path::new("source_dir");
+
+        // 保留扩展名（文件）
+        process_extension(src_file, &mut path, true);
+        assert_eq!(path, PathBuf::from("test.txt"));
+
+        // 不保留扩展名
+        path.set_file_name("test");
+        process_extension(src_file, &mut path, false);
+        assert_eq!(path, PathBuf::from("test"));
+
+        // 目录应忽略扩展名
+        let mut dir_path = PathBuf::from("dir/");
+        process_extension(src_file, &mut dir_path, true);
+        assert_eq!(dir_path, PathBuf::from("dir/"));
+
+        // 源没有扩展名
+        let mut path = PathBuf::from("test");
+        process_extension(src_dir, &mut path, true);
+        assert_eq!(path, PathBuf::from("test"));
+    }
 
     #[test]
     fn test_default_dst_path() {
@@ -449,5 +522,30 @@ mod test {
             assert_eq!(file_tar_k_f, parse_args_dst(file_abs, some_dst, false));
             assert_eq!(file_tar_k_f, parse_args_dst(file_rel, some_dst, false));
         }
+    }
+
+    #[test]
+    fn test_create_symlink() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_file = temp_dir.path().join("source.txt");
+        let src_dir = temp_dir.path().join("source_dir");
+        let dst_file = temp_dir.path().join("link.txt");
+        let dst_dir = temp_dir.path().join("link_dir");
+
+        // 创建测试文件/目录
+        fs::write(&src_file, "fastlink test").unwrap();
+        fs::create_dir(&src_dir).unwrap();
+
+        // 测试文件符号链接
+        assert!(create_symlink(&src_file, &dst_file).is_ok());
+        assert!(dst_file.exists());
+
+        // 测试目录符号链接
+        assert!(create_symlink(&src_dir, &dst_dir).is_ok());
+        assert!(dst_dir.exists());
+
+        // 清理
+        fs::remove_file(dst_file).unwrap();
+        fs::remove_dir(dst_dir).unwrap();
     }
 }
