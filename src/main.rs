@@ -8,6 +8,9 @@ use std::io::Write;
 use std::os::windows::fs::{symlink_dir, symlink_file};
 use std::path::{Path, PathBuf};
 
+mod err;
+use err::{ErrorCode, MyError};
+
 // const PATHEXT: &str = ".EXE;.COM;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
 
 // /// 获取系统可执行扩展名列表
@@ -37,7 +40,8 @@ Example：
     // 在本目录创建一个名为img-link.jpg的符号链接
     fastlink image.jpg img-link -k
 
-    // 在本目录的子目录tmp中创建名为output.csv的符号链接，若tmp目录不存在将自动创建并警告
+    // 在本目录的子目录tmp中创建名为output.csv的符号链接，若tmp目录不存在将退出
+    //（添加--make-dir或--md参数选项则自动创建)
     fastlink data.csv tmp/output --keep-extention
 
     // 在本目录的父目录创建名为data符号链接，指向data.csv (不建议, Not Recommended)
@@ -57,6 +61,10 @@ struct Args {
     /// 保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
     #[arg(short, long)]
     keep_extention: bool,
+
+    /// 自动创建不存在的目录
+    #[arg(long, visible_alias("md"))]
+    make_dir: bool,
 
     /// 只输出warn与error level的日志
     #[arg(short, long)]
@@ -133,24 +141,38 @@ fn main() {
     let dst_path = parse_args_dst(&args.src, args.dst.as_deref(), keep_extention).clean();
 
     // 验证dst路径父目录
-    match validate_dst(&dst_path) {
-        Err(e) => {
-            log::error!(
-                "[DST]父目录不存在，且创建失败，请尝试手动创建或修改路径: \n{}",
-                e
-            );
-        }
-        Ok(dst_abs) => {
-            log::debug!(
-                "符号链接创建中
+    let dst_res = validate_dst(&dst_path, args.make_dir);
+    let ok_to_mklink = handle_validate_dst_err(&dst_res);
+    // mklink
+    if ok_to_mklink {
+        let dst_abs = dst_res.unwrap();
+        log::debug!(
+            "符号链接创建中
     src: {}
     dst: {}",
-                src_abs.display(),
-                dst_abs.display()
-            );
-            mklink(src_abs, dst_abs);
-        }
-    };
+            src_abs.display(),
+            dst_abs.display()
+        );
+        mklink(src_abs, dst_abs);
+    }
+}
+
+/// 处理validate_dst的错误
+fn handle_validate_dst_err(validate_dst_res: &Result<PathBuf, MyError>) -> bool {
+    (*validate_dst_res).as_ref().map_or_else(
+        |e| {
+            if let ErrorCode::ParentNotExist = e.code {
+                log::error!("{}", e.msg);
+            } else {
+                log::error!(
+                    "[DST]父目录不存在，且创建失败，请尝试手动创建或修改路径: \n{}",
+                    e.msg
+                );
+            }
+            false
+        },
+        |_| true,
+    )
 }
 
 /// 对一些特殊情况进行警告
@@ -182,53 +204,63 @@ fn special_warn(args: &Args) {
     }
 }
 
-/// 判断dst所在目录是否存在，若不存在，则为其创建，并警告
-fn validate_dst(dst: &Path) -> Result<PathBuf, String> {
+/// 返回规范化后的dst绝对路径
+/// 若其父目录不存在且make_dir为false，则将返回Err
+fn validate_dst(dst: &Path, make_dir: bool) -> Result<PathBuf, MyError> {
     log::debug!("validate_dst/dst: {}", dst.display());
 
     let dst_parent_option = dst.parent();
     // dst父目录不存在
+    handle_validate_dst_parent_not_exist(dst, make_dir, dst_parent_option)
+}
+
+/// 为validate_dst函数处理dst父目录不存在的情况
+fn handle_validate_dst_parent_not_exist(
+    dst: &Path,
+    make_dir: bool,
+    dst_parent_option: Option<&Path>,
+) -> Result<PathBuf, MyError> {
     if dst_parent_option.is_some() && !dst_parent_option.unwrap().exists() {
         let dst_parent = dst_parent_option.unwrap().clean();
-        // 创建目录并处理错误
-        match mkdirs(&dst_parent) {
-            Ok(_) => {
-                log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
-                // 重新组合dst路径
-                let dst_path = if let Some(dst_filename) = dst.file_name() {
-                    dst_parent.join(dst_filename)
-                } else {
-                    dst.to_path_buf()
-                };
-                log::debug!("validate_dst/dst return: {}", dst_path.display());
-                Ok(dst_path)
-            }
-            Err(e) => Err(format!(
+        if make_dir {
+            // 创建目录并处理错误
+            Ok(handle_validate_dst_mkdirs(dst, dst_parent)?)
+        } else {
+            Err(MyError::new(
+                ErrorCode::ParentNotExist,
+                format!(
+                    "[DST]父目录: {} 不存在，若需自动创建请添加参数--make-dir或--md",
+                    dst_parent.display()
+                ),
+            ))
+        }
+    } else {
+        Ok(dst.to_path_buf())
+    }
+}
+
+/// 为validate_dst函数（handle_validate_dst_parent_not_exist函数）处理创建目录及相关错误
+fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: PathBuf) -> Result<PathBuf, MyError> {
+    match mkdirs(&dst_parent) {
+        Ok(_) => {
+            log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
+            // 重新组合dst路径
+            let dst_path = if let Some(dst_filename) = dst.file_name() {
+                dst_parent.join(dst_filename)
+            } else {
+                dst.to_path_buf()
+            };
+            log::debug!("validate_dst/dst return: {}", dst_path.display());
+            Ok(dst_path)
+        }
+        Err(e) => Err(MyError::new(
+            ErrorCode::Unknown,
+            format!(
                 "[DST]父目录: {} 创建失败\n\tErrorMsg: {}",
                 dst_parent.display(),
                 e
-            )),
-        }
-
-        // 规范化dst_parent
-        // let dst_parent_res = dunce::canonicalize(&dst_parent);
-        // // unused variable
-        // let _dst_parent = match dst_parent_res {
-        //     Ok(_dst_parent) => _dst_parent,
-        //     // 失败则只警告, 保持dst_parent不变
-        //     Err(e) => {
-        //         log::warn!(
-        //             "Fail to canonicalize [DST] parent dir: {}\n{}",
-        //             dst_parent.display(),
-        //             e
-        //         );
-        //         dst_parent
-        //     }
-        // }
-        // .clean();
-        // log::debug!("validate_dst/dst_parent: {}", dst_parent.display());
-    } else {
-        Ok(dst.to_path_buf())
+            ),
+        )),
     }
 }
 
@@ -284,7 +316,7 @@ fn default_dst_path(src: &Path) -> PathBuf {
     PathBuf::from(base_name)
 }
 
-/// 扩展名处理逻辑（统一处理相对/绝对路径）
+/// 扩展名处理逻辑（统一处理相对/绝对路径）, 调用后直接修改传入的dst
 fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
     if keep_extention {
         if let Some(src_ext) = src.extension() {
@@ -389,11 +421,11 @@ mod tests {
         let existing_path = base_path.join("existing_dir");
         fs::create_dir(&existing_path).unwrap();
         let test_path = existing_path.join("test.txt");
-        assert!(validate_dst(&test_path).is_ok());
+        assert!(validate_dst(&test_path, true).is_ok());
 
         // 需要创建父目录的情况
         let new_path = base_path.join("new_dir/test.txt");
-        let result = validate_dst(&new_path);
+        let result = validate_dst(&new_path, true);
         assert!(result.is_ok());
         assert!(new_path.parent().unwrap().exists());
 
@@ -402,7 +434,7 @@ mod tests {
         let invalid_path = Path::new("C:\\Windows\\System32\\test\\test.txt");
         #[cfg(not(windows))]
         let invalid_path = Path::new("/root/test/test.txt");
-        assert!(validate_dst(invalid_path).is_err());
+        assert!(validate_dst(invalid_path, true).is_err());
     }
 
     #[test]
