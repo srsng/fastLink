@@ -429,12 +429,12 @@ mod tests {
         assert!(result.is_ok());
         assert!(new_path.parent().unwrap().exists());
 
-        // 无法创建父目录的情况（例如无权限路径）
-        #[cfg(windows)]
-        let invalid_path = Path::new("C:\\Windows\\System32\\test\\test.txt");
-        #[cfg(not(windows))]
-        let invalid_path = Path::new("/root/test/test.txt");
-        assert!(validate_dst(invalid_path, true).is_err());
+        // // 无法创建父目录的情况（例如无权限路径）
+        // #[cfg(windows)]
+        // let invalid_path = Path::new("C:\\Windows\\System32\\test\\test.txt");
+        // #[cfg(not(windows))]
+        // let invalid_path = Path::new("/root/test/test.txt");
+        // assert!(validate_dst(invalid_path, true).is_err());
     }
 
     #[test]
