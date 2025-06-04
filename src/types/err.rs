@@ -58,12 +58,12 @@ impl MyError {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    // #[test]
-    // fn test_fmt() {
-    //     println!("{:?}", ErrorCode::InvalidInput);
-    // }
-}
+//     // #[test]
+//     // fn test_fmt() {
+//     //     println!("{:?}", ErrorCode::InvalidInput);
+//     // }
+// }

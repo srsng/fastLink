@@ -1,8 +1,11 @@
-use crate::types::err::MyError;
+// use crate::types::err::MyError;
 use clap::builder::styling::{Color, RgbColor, Style};
-use std::{io::Write, path::PathBuf};
+use std::{
+    io::Write,
+    // path::PathBuf
+};
 
-pub fn init_log(quiet: bool, debug: bool, save_log: &Option<String>) {
+pub fn init_log(quiet: bool, debug: bool, _save_log: &Option<String>) {
     // 初始化日志系统
     let mut builder = env_logger::Builder::new();
 

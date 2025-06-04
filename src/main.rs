@@ -1,4 +1,8 @@
 // todo: 参数实现 overwrite_link save_log
+// todo: 编写tests
+// todo：编写文档
+// todo:清理无用代码
+// 其他行内todo
 
 use clap::Parser;
 use std::path::Path;
@@ -35,9 +39,17 @@ fn main() {
     special_warn(&args);
 
     let task_res = LinkTask::try_from(&args);
-    task_res
-        .map_err(|e| e.log())
-        .map(|mut task| task.mklinks().map_err(|e| e.log()));
+
+    // task_res
+    //     .map(|mut task| task.mklinks().map_err(|e| e.log()))
+    //     .map_err(|e| e.log());
+    match task_res {
+        Ok(mut task) => match task.mklinks() {
+            Ok(()) => (),
+            Err(e) => e.log(),
+        },
+        Err(e) => e.log(),
+    }
 }
 
 // /// 处理validate_dst的错误
