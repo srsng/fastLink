@@ -18,7 +18,9 @@ pub struct LinkTaskPre {
     pub make_dir: bool,            // 是否自动创建不存在的目录
     pub only_file: bool,           //只处理文件
     pub only_dir: bool,            //只处理目录
-    pub overwrite_link: bool,      // 覆盖已存在的符号链接
+    pub overwrite_links: bool,     // 覆盖已存在的符号链接
+    pub re_no_check: bool,
+    pub re_output_flatten: bool,
 
     pub src_path: Option<PathBuf>, // 规范化后的源路径
     pub dst_path: Option<PathBuf>, // 规范化后的目标目录路径
@@ -36,14 +38,16 @@ impl From<&Args> for LinkTaskPre {
             make_dir: args.make_dir,
             only_file: args.only_file,
             only_dir: args.only_dir,
-            overwrite_link: args.overwrite_link,
+            overwrite_links: args.overwrite_links,
+            re_no_check: args.re_no_check,
+            re_output_flatten: args.re_output_flatten,
             ..Default::default()
         }
     }
 }
 
 impl LinkTaskPre {
-    pub fn main(&mut self) -> Result<(), MyError> {
+    pub fn parse(&mut self) -> Result<(), MyError> {
         // 获取src_path
         self.check_src()?;
         // 获取dst_path

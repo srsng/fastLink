@@ -9,6 +9,7 @@ pub enum ErrorCode {
     FailToMakeDir = 100,
     FailAtMakeLink = 101,
     FailToGetFathParent = 102,
+    FailToGetFileMetadata = 103,
 }
 
 impl fmt::Display for ErrorCode {
@@ -21,6 +22,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::FailAtMakeLink => write!(f, "Fail At Make Link"),
             ErrorCode::FailToMakeDir => write!(f, "Fail To Make Dir"),
             ErrorCode::FailToGetFathParent => write!(f, "Fail To Get Fath Parent"),
+            ErrorCode::FailToGetFileMetadata => write!(f, "Fail To Get File Metadata"),
         }
     }
 }

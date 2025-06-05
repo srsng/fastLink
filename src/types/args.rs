@@ -52,33 +52,44 @@ pub struct Args {
     #[arg(long)]
     pub debug: bool,
 
-    /// 对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建
-    /// 若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建
-    /// 若要限制深度，使用re-max-depth参数
+    /// 对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建，
+    /// 若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建，
+    /// 若要限制深度，使用--re-max-depth参数。
+    /// 匹配的路径不受--keep_extention参数影响。
     #[arg(long, visible_alias("re"), value_parser = validate_regex)]
     pub regex: Option<Regex>,
 
-    /// 限制regex匹配的最大深度，启用make_dir参数时，默认4层，否则为1层
-    /// 传入0表示没有层数限制
-    /// 该参数数值非负
+    /// 限制regex匹配的最大深度，启用make_dir参数时，默认4层，否则为1层,
+    /// 传入0表示没有层数限制.
+    /// 该参数数值非负.
     #[arg(long, visible_alias("re-depth"), value_parser = validate_re_max_depth)]
     pub re_max_depth: Option<usize>,
 
     /// 只处理文件，同时传入only_dir则出错
-    #[arg(long, conflicts_with = "only_dir")]
+    #[arg(long, conflicts_with = "only_dir", visible_alias("F"))]
     pub only_file: bool,
 
     /// 只处理目录，同时传入only_file则出错
-    #[arg(long, conflicts_with = "only_file")]
+    #[arg(long, conflicts_with = "only_file", visible_alias("D"))]
     pub only_dir: bool,
 
     /// re匹配过程中，深入读取符号链接进行匹配
-    #[arg(long, visible_alias("follow-links"))]
+    #[arg(long, visible_alias("follow_links"), visible_alias("follow_link"))]
     pub re_follow_links: bool,
 
+    /// 取消re匹配后，创建链接前的用户手动检查阶段
+    #[arg(long, visible_alias("no_check"))]
+    pub re_no_check: bool,
+
+    /// 对于re匹配的后所有内容，不按照原本目录（镜像）创建链接，
+    /// 而是直接创建到[DST]中。
+    /// 如果匹配的文件名有重复，则会拒绝创建并报错
+    #[arg(long, visible_alias("flatten"))]
+    pub re_output_flatten: bool,
+
     /// 覆盖同名已存在的符号链接
-    #[arg(long, visible_alias("overwrite"))]
-    pub overwrite_link: bool,
+    #[arg(long, visible_alias("overwrite"), visible_alias("overwrite_link"))]
+    pub overwrite_links: bool,
 
     /// 在目标路径输出/保存/导出本次处理日志
     /// 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log
