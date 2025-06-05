@@ -14,7 +14,7 @@ pub fn mk_parents(path: &Path) -> Result<(), MyError> {
     let parent = path.parent();
     if parent.is_none() {
         return Err(MyError::new(
-            ErrorCode::FailToGetFathParent,
+            ErrorCode::FailToGetPathParent,
             format!("{}", &path.display()),
         ));
     }

@@ -1,25 +1,85 @@
-// use crate::types::err::MyError;
+use crate::types::err::{ErrorCode, MyError};
+use crate::WORK_DIR;
 use clap::builder::styling::{Color, RgbColor, Style};
-use std::{
-    io::Write,
-    // path::PathBuf
-};
+use std::fs::{self, File};
+use std::io::{self, Write};
+use std::path::PathBuf;
+use std::sync::Mutex;
+use strip_ansi_escapes;
 
 // 设置文件颜色（绿色）
 pub const FILE_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(19, 161, 14))));
 // 设置父目录颜色（灰色）
 pub const PARENT_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(150, 150, 150))));
 
-pub fn init_log(quiet: bool, debug: bool, _save_log: &Option<String>) {
+// 实现多目标输出（stdout 和文件）
+struct MultiWriter {
+    stdout: io::Stdout,
+    file: Mutex<File>,
+}
+
+impl MultiWriter {
+    fn new(file: File) -> Self {
+        MultiWriter {
+            stdout: io::stdout(),
+            file: Mutex::new(file),
+        }
+    }
+}
+
+impl Write for MultiWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        // 写入 stdout
+        let stdout_result = self.stdout.write(buf);
+
+        // 去除 ANSI 颜色代码后写入文件
+        let plain_text = strip_ansi_escapes::strip(buf);
+        let file_result = self.file.lock().unwrap().write(&plain_text);
+
+        // 返回 stdout 的写入字节数（优先考虑 stdout 的成功写入）
+        stdout_result.or(file_result)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.stdout.flush()?;
+        self.file.lock().unwrap().flush()?;
+        Ok(())
+    }
+}
+
+pub fn init_log(quiet: bool, debug: bool, save_log: &Option<String>) {
     // 初始化日志系统
     let mut builder = env_logger::Builder::new();
+    // 启用终端颜色输出
+    builder
+        .is_test(debug)
+        .write_style(env_logger::WriteStyle::Always);
 
-    // todo 实装日志输出
-    // if save_log.is_some() {
-    //     let log_file = File::create("app.log").unwrap();
-    //     let path = parse_save_path(save_log);
-    //     builder = builder.target(target).target(Target::Stdout);
-    // }
+    // 处理日志文件输出
+    if let Some(log_path) = save_log {
+        let log_file_path = match parse_save_path(log_path) {
+            Ok(path) => path,
+            Err(e) => {
+                log::warn!("日志路径解析失败: {}, 将使用默认路径", e);
+                default_log_path()
+            }
+        };
+
+        match File::create(&log_file_path) {
+            Ok(file) => {
+                let multi_writer = MultiWriter::new(file);
+                builder.target(env_logger::Target::Pipe(Box::new(multi_writer)));
+                log::info!("日志将保存至: {}", log_file_path.display());
+            }
+            Err(e) => {
+                log::warn!(
+                    "无法创建日志文件 {}: {}, 日志仅输出到终端",
+                    log_file_path.display(),
+                    e
+                );
+            }
+        }
+    }
 
     builder
         .format(|buf, record| {
@@ -33,7 +93,7 @@ pub fn init_log(quiet: bool, debug: bool, _save_log: &Option<String>) {
             // 格式化输出
             writeln!(
                 buf,
-                "{time_style}{time}{time_style:#} {level_style}{level}{level_style:#} {}",
+                "{time_style}{time}{time_style:#} {level_style}{level:5}{level_style:#} {}",
                 record.args()
             )
         })
@@ -48,4 +108,43 @@ pub fn init_log(quiet: bool, debug: bool, _save_log: &Option<String>) {
     log::debug!("log init.")
 }
 
-// fn parse_save_path(save_log: Option<String>) -> Result<PathBuf, MyError> {}
+fn parse_save_path(save_log: &str) -> Result<PathBuf, MyError> {
+    let path = PathBuf::from(save_log);
+
+    // 规范化路径
+    let normalized_path = if path.is_absolute() {
+        path
+    } else {
+        WORK_DIR.join(path)
+    };
+
+    // 检查路径合法性
+    if normalized_path
+        .to_string_lossy()
+        .contains(['<', '>', ':', '"', '|', '?', '*'])
+    {
+        return Err(MyError::new(
+            ErrorCode::InvalidInput,
+            format!("日志路径 {} 包含非法字符", normalized_path.display()),
+        ));
+    }
+
+    // 检查父目录并尝试创建
+    if let Some(parent) = normalized_path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).map_err(|e| {
+                MyError::new(
+                    ErrorCode::IoError,
+                    format!("无法创建日志文件父目录 {}: {}", parent.display(), e),
+                )
+            })?;
+        }
+    }
+
+    Ok(normalized_path)
+}
+
+fn default_log_path() -> PathBuf {
+    let timestamp = chrono::Local::now().format("%y-%m-%d-%H-%M-%S");
+    WORK_DIR.join(format!("fastlink-{}.log", timestamp))
+}

@@ -1,4 +1,3 @@
-// todo: 参数实现 save_log
 // todo: 编写tests
 // todo：编写文档
 // todo:清理无用代码
@@ -12,6 +11,11 @@ use types::args::Args;
 use utils::logs::init_log;
 
 use crate::types::link_task::LinkTask;
+
+lazy_static::lazy_static! {
+    pub static ref WORK_DIR: std::path::PathBuf = std::env::current_dir().expect("Failed to get initial work directory");
+}
+
 // use crate::types::link_task_pre::LinkTaskPre;
 // const PATHEXT: &str = ".EXE;.COM;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
 

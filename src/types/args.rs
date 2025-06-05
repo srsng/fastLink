@@ -65,12 +65,12 @@ pub struct Args {
     #[arg(long, visible_alias("re-depth"), value_parser = validate_re_max_depth)]
     pub re_max_depth: Option<usize>,
 
-    /// 只处理文件，同时传入only_dir则出错
-    #[arg(long, conflicts_with = "only-dir", visible_alias("F"))]
+    /// 只处理文件，同时传入only-dir则出错
+    #[arg(long, conflicts_with = "only_dir", visible_alias("F"))]
     pub only_file: bool,
 
-    /// 只处理目录，同时传入only_file则出错
-    #[arg(long, conflicts_with = "only-file", visible_alias("D"))]
+    /// 只处理目录，同时传入only-file则出错
+    #[arg(long, conflicts_with = "only_file", visible_alias("D"))]
     pub only_dir: bool,
 
     /// re匹配过程中，深入读取符号链接进行匹配
@@ -91,8 +91,9 @@ pub struct Args {
     #[arg(
         long,
         visible_alias("overwrite"),
-        visible_alias("overwrite_link"),
-        conflicts_with = "skip-exist-links"
+        visible_alias("over-write"),
+        visible_alias("overwrite-link"),
+        conflicts_with = "skip_exist_links"
     )]
     pub overwrite_links: bool,
 
@@ -100,8 +101,9 @@ pub struct Args {
     #[arg(
         long,
         visible_alias("skip-exist"),
+        visible_alias("skip-exists"),
         visible_alias("skip-exist-link"),
-        conflicts_with = "overwrite-links"
+        conflicts_with = "overwrite_links"
     )]
     pub skip_exist_links: bool,
 

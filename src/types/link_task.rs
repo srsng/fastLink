@@ -3,6 +3,7 @@ use crate::types::err::{ErrorCode, MyError};
 use crate::types::link_task_pre::LinkTaskPre;
 use crate::utils::func::mkdirs;
 use crate::utils::logs::{FILE_STYLE, PARENT_STYLE};
+use crate::WORK_DIR;
 use path_clean::PathClean;
 use regex::Regex;
 use std::convert::TryFrom;
@@ -44,7 +45,7 @@ fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
         .enumerate()
         .map(|(i, (src, dst))| {
             format!(
-                "{:4}. {PARENT_STYLE}{}{PARENT_STYLE:#}{MAIN_SEPARATOR}{FILE_STYLE}{:?}{FILE_STYLE:#} -> {PARENT_STYLE}{}{PARENT_STYLE:#}{MAIN_SEPARATOR}{FILE_STYLE}{:?}{FILE_STYLE:#}",
+                "{:4}. {PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#} -> {PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#}",
                 i + 1,
                 src.parent().unwrap_or_else(|| Path::new("")).display(),
                 src.file_name().unwrap_or(OsStr::new("[error: Unknown]")),
@@ -179,8 +180,10 @@ impl LinkTask {
                     if self.make_dir {
                         if let Some(dirs) = self.dirs_to_create.as_ref() {
                             for dir in dirs {
+                                // if !dir.exists() {
                                 mkdirs(dir)?;
                                 log::info!("已创建目录: {}", dir.display());
+                                // }
                             }
                         }
                     }
@@ -188,8 +191,14 @@ impl LinkTask {
 
                     log::info!("符号链接创建中");
                     for (src, dst) in paths {
-                        log::debug!("{} -> {}", src.display(), dst.display());
-                        mklink(src, dst, Some(self.overwrite_links))?;
+                        let src = &self.src_path.join(src);
+                        let dst = &self.dst_path.join(dst);
+                        mklink(
+                            src,
+                            dst,
+                            Some(self.overwrite_links),
+                            Some(self.skip_exist_links),
+                        )?;
                     }
                     log::info!("符号链接创建完成！");
 
@@ -212,7 +221,12 @@ impl LinkTask {
                         &self.src_path.display(),
                         &self.dst_path.display()
                     );
-                    mklink(&self.src_path, &self.dst_path, Some(self.overwrite_links))?;
+                    mklink(
+                        &self.src_path,
+                        &self.dst_path,
+                        Some(self.overwrite_links),
+                        Some(self.skip_exist_links),
+                    )?;
                     log::info!("符号链接创建成功");
                 }
                 Ok(())
@@ -224,11 +238,6 @@ impl LinkTask {
     pub fn check_src(&mut self) -> Result<(), MyError> {
         let src_abs_res = dunce::canonicalize(&self.src_ori);
         if let Err(e) = src_abs_res {
-            // self.error = Some(format!(
-            //     "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>: {}",
-            //     &self.src_ori, e
-            // ));
-            // log::error!("{:?}", self.error);
             Err(MyError::new(
                 ErrorCode::Unknown,
                 format!(
@@ -258,8 +267,9 @@ impl LinkTask {
             Some(d) => {
                 // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
                 let dst_path = Path::new(&d);
+                let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
                 // 规范化
-                if src_path.is_file() && dst_path.is_dir() {
+                if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
                     canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
                 } else {
                     canonicalize_path(&PathBuf::from(d))?
@@ -310,7 +320,7 @@ impl LinkTask {
         let mut matched_paths: Vec<(PathBuf, PathBuf)> = Vec::new();
         let mut dirs_to_create: std::collections::HashSet<PathBuf> =
             std::collections::HashSet::new();
-        let mut filename_counts: std::collections::HashMap<String, Vec<PathBuf>> =
+        let mut target_paths: std::collections::HashMap<PathBuf, Vec<PathBuf>> =
             std::collections::HashMap::new();
 
         // 构建路径遍历器，re_max_depth、re_follow_links相关参数于此使用
@@ -321,12 +331,13 @@ impl LinkTask {
         for entry in walker.into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
 
-            // 处理only-file与only-dir
+            // 处理参数 only_file 和 only_dir
             let is_file = entry.file_type().is_file();
             let is_dir = entry.file_type().is_dir();
             if (self.only_file && !is_file) || (self.only_dir && !is_dir) {
                 continue;
             }
+
             let path_str = path.to_string_lossy();
             if re.is_match(&path_str) {
                 if let Ok(relative_path) = path.strip_prefix(&self.src_path) {
@@ -342,6 +353,14 @@ impl LinkTask {
                         relative_path.to_path_buf()
                     };
 
+                    // 计算完整的目标路径
+                    let full_dst = self.dst_path.join(&target_path);
+
+                    // 收集目标路径以检查重复
+                    target_paths
+                        .entry(full_dst.clone())
+                        .or_default()
+                        .push(path.to_path_buf());
                     // 收集目标父目录
                     if self.make_dir {
                         let full_dst = self.dst_path.join(&target_path);
@@ -353,43 +372,31 @@ impl LinkTask {
                         }
                     }
 
-                    // 仅在展平模式下检查重复文件名
-                    if self.re_output_flatten {
-                        let filename = target_path
-                            .file_name()
-                            .unwrap_or_else(|| OsStr::new("unnamed-fastlink"))
-                            .to_string_lossy()
-                            .into_owned();
-                        filename_counts
-                            .entry(filename)
-                            .or_default()
-                            .push(path.to_path_buf());
-                    }
-
                     matched_paths.push((relative_path.to_path_buf(), target_path));
                 }
             }
         }
-        // 检查重复文件名
+
+        // 检查重复目标路径
         if self.re_output_flatten {
-            let duplicates: Vec<_> = filename_counts
+            let duplicates: Vec<_> = target_paths
                 .into_iter()
                 .filter(|(_, paths)| paths.len() > 1)
                 .collect();
             if !duplicates.is_empty() {
-                let mut error_msg = String::from("检测到重复文件名，无法创建链接：\n");
-                for (filename, paths) in duplicates {
+                let mut error_msg = String::from("检测到重复目标路径，无法创建链接：\n");
+                for (target_path, src_paths) in duplicates {
                     error_msg.push_str(&format!(
-                        "文件名 '{}' 出现在以下路径：\n{}\n",
-                        filename,
-                        paths
+                        "目标路径 '{}' 对应以下源路径：\n{}\n",
+                        target_path.display(),
+                        src_paths
                             .iter()
                             .map(|p| format!("  - {}", p.display()))
                             .collect::<Vec<_>>()
                             .join("\n")
                     ));
                 }
-                return Err(MyError::new(ErrorCode::InvalidInput, error_msg));
+                return Err(MyError::new(ErrorCode::DuplicateTarget, error_msg));
             }
         }
 
@@ -439,6 +446,7 @@ impl TryFrom<LinkTaskPre> for LinkTask {
             only_file: task_pre.only_file,
             only_dir: task_pre.only_dir,
             overwrite_links: task_pre.overwrite_links,
+            skip_exist_links: task_pre.skip_exist_links,
             re_no_check: task_pre.re_no_check,
             re_output_flatten: task_pre.re_output_flatten,
             ..Default::default()
@@ -515,14 +523,15 @@ fn canonicalize_path(path: &Path) -> Result<PathBuf, MyError> {
     if path.is_absolute() {
         Ok(path.to_path_buf().clean())
     } else {
-        let curdir = std::env::current_dir();
-        match curdir {
-            Ok(curdir) => Ok(curdir.join(path.clean())),
-            Err(e) => Err(MyError::new(
-                ErrorCode::Unknown,
-                format!("Failed to get current directory: {}", e),
-            )),
-        }
+        // let curdir = std::env::current_dir();
+        // match curdir {
+        //     Ok(curdir) => Ok(curdir.join(path.clean())),
+        //     Err(e) => Err(MyError::new(
+        //         ErrorCode::Unknown,
+        //         format!("Failed to get current directory: {}", e),
+        //     )),
+        // }
+        Ok(WORK_DIR.join(path.clean()))
     }
 }
 
@@ -577,45 +586,179 @@ fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: PathBuf) -> Result<PathBuf
 }
 
 /// 创建符号链接并处理错误
-fn mklink(src: &PathBuf, dst: &PathBuf, overwrite_links: Option<bool>) -> Result<(), MyError> {
+fn mklink(
+    src: &PathBuf,
+    dst: &PathBuf,
+    overwrite_links: Option<bool>,
+    skip_exist_links: Option<bool>,
+) -> Result<(), MyError> {
     // log::info!(
     //     "符号链接创建中: New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
     //     src.display(),
     //     dst.display(),
     // );
-    // log::info!("符号链接创建成功")
-    // log::error!("符号链接创建失败: {}", e)
-    create_symlink(src, dst, overwrite_links.unwrap_or(false))
+    let check_res = check_overwrite(
+        dst,
+        overwrite_links.unwrap_or(false),
+        skip_exist_links.unwrap_or(false),
+    );
+    match check_res {
+        // 跳过已存在的符号链接
+        Err(e) if e.code == ErrorCode::SkipExistingLink => {
+            log::info!("已跳过目标链接{}", dst.display());
+            return Ok(());
+        }
+        res => handle_mklinks_error(res, src, dst)?,
+    }
+
+    let mklink_res = create_symlink(
+        src,
+        dst,
+        // overwrite_links.unwrap_or(false),
+        // skip_exist_links.unwrap_or(false),
+    );
+    match mklink_res {
+        Ok(_) => {
+            log::info!("创建符号链接: {} -> {}", src.display(), dst.display());
+            Ok(())
+        }
+        res => handle_mklinks_error(res, src, dst),
+    }
 }
 
-/// 检查overwrite参数选项，删除符号链接等也在此函数中
-fn check_overwrite(overwrite_links: bool, dst: &Path) -> Result<(), MyError> {
-    if overwrite_links && dst.exists() {
-        match fs::symlink_metadata(dst) {
-            Err(e) => Err(MyError::new(
-                ErrorCode::FailToGetFathParent,
-                format!("{} {}", e, &dst.display()),
-            )),
-            Ok(metadata) => {
-                if metadata.file_type().is_symlink() {
+/// 检查 overwrite 和 skip_exist_links 参数选项
+/// 覆写前删除符号链接也在此处完成
+///
+/// 注：对于dst.exists()
+/// 当dst为符号链接，且指向文件不存在时，该表达式返回false，即使该符号链接存在
+/// 使用symlink_metadata来避免following symlinks
+fn check_overwrite(
+    dst: &Path,
+    overwrite_links: bool,
+    skip_exist_links: bool,
+) -> Result<(), MyError> {
+    match fs::symlink_metadata(dst) {
+        Ok(metadata) => {
+            // 是符号链接
+            if metadata.file_type().is_symlink() {
+                // 路径是一个符号链接（可能损坏）, 跳过已存在链接
+                if skip_exist_links {
+                    if !dst.exists() {
+                        log::warn!("发现损坏的已存在符号链接: {}", dst.display());
+                    }
+                    Err(MyError::new(
+                        ErrorCode::SkipExistingLink,
+                        format!("目标路径符号链接 {} 已存在，跳过创建", dst.display()),
+                    ))
+                // 删除已存在链接
+                } else if overwrite_links {
                     fs::remove_file(dst).map_err(|e| {
                         MyError::new(
-                            ErrorCode::FailAtMakeLink,
-                            format!("无法删除已存在的符号链接 {}: {}", dst.display(), e),
+                            ErrorCode::FailToDelLink,
+                            format!("{}: {}", dst.display(), e),
                         )
                     })?;
-                    log::info!("已删除已存在的符号链接: {}", dst.display());
+                    log::info!("已删除符号链接 {}", dst.display());
                     Ok(())
+                // 不处理，错误处理时终止程序
                 } else {
                     Err(MyError::new(
-                        ErrorCode::FailAtMakeLink,
-                        format!("{} 不是符号链接，无法覆盖", dst.display()),
+                        ErrorCode::TargetLinkExists,
+                        format!("{}", dst.display()),
                     ))
                 }
+            // 路径存在，但不是符号链接
+            } else {
+                Err(MyError::new(
+                    ErrorCode::TargetExistsAndNotLink,
+                    format!("{}", dst.display()),
+                ))
             }
         }
-    } else {
-        Ok(())
+        // 路径不存在，可以继续后续操作
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        // 其他错误，如权限问题
+        Err(e) => Err(MyError::new(
+            ErrorCode::FailToGetFileMetadata,
+            format!("无法获取路径元数据 {}: {}", dst.display(), e),
+        )),
+    }
+
+    // if dst.exists() {
+    //     match fs::symlink_metadata(dst) {
+    //         Err(e) => Err(MyError::new(
+    //             ErrorCode::FailToGetPathParent,
+    //             format!("{} {}", e, &dst.display()),
+    //         )),
+    //         Ok(metadata) => {
+    //             // 若是符号链接
+    //             if metadata.file_type().is_symlink() {
+    //                 // 跳过已存在链接
+    //                 if skip_exist_links {
+    //                     Err(MyError::new(
+    //                         ErrorCode::SkipExistingLink,
+    //                         format!("目标路径符号链接 {} 已存在，跳过创建", dst.display()),
+    //                     ))
+    //                 // 删除已存在链接
+    //                 } else if overwrite_links {
+    //                     fs::remove_file(dst).map_err(|e| {
+    //                         MyError::new(
+    //                             ErrorCode::FailToDelLink,
+    //                             format!("{}: {}", dst.display(), e),
+    //                         )
+    //                     })?;
+    //                     log::info!("已删除符号链接 {}", dst.display());
+    //                     Ok(())
+    //                 // 不处理，错误处理时终止程序
+    //                 } else {
+    //                     Err(MyError::new(
+    //                         ErrorCode::TargetLinkExists,
+    //                         format!("{}", dst.display()),
+    //                     ))
+    //                 }
+    //             // 已存在，但不是链接
+    //             } else {
+    //                 Err(MyError::new(
+    //                     ErrorCode::TargetExistsAndNotLink,
+    //                     format!("{}", dst.display()),
+    //                 ))
+    //             }
+    //         }
+    //     }
+    // } else {
+    //     Ok(())
+    // }
+}
+
+fn handle_mklinks_error(res: Result<(), MyError>, _src: &Path, dst: &Path) -> Result<(), MyError> {
+    match res {
+        // 成功创建
+        Ok(_) => Ok(()),
+        // 目标链接已存在
+        Err(mut e) if e.code == ErrorCode::TargetLinkExists => {
+            e.msg = format!(
+                "目标链接 {} 已存在，若需覆盖请添加参数--overwrite，需要跳过请添加参数--skip-exist",
+                dst.display()
+            );
+            Err(e)
+        }
+        // 目标路径存在，但不是符号链接
+        Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
+            log::error!("目标路径存在，但不是符号链接，无法处理 {}", e.msg);
+            Ok(())
+        }
+        // 跳过已存在的符号链接
+        Err(e) if e.code == ErrorCode::SkipExistingLink => {
+            log::info!("已跳过目标链接{}", dst.display());
+            Ok(())
+        }
+        // 无法删除已存在的符号链接
+        Err(e) if e.code == ErrorCode::FailToDelLink => {
+            log::error!("删除链接失败：{}", dst.display());
+            Ok(())
+        }
+        // 其他错误: FailToGetPathParent, FailToGetFileMetadata, FailAtMakeLink, Unknown
+        Err(e) => Err(e),
     }
 }
 
@@ -624,12 +767,13 @@ fn check_overwrite(overwrite_links: bool, dst: &Path) -> Result<(), MyError> {
 pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(
     src: P,
     dst: Q,
-    overwrite_links: bool,
+    // overwrite_links: bool,
+    // skip_exist_links: bool,
 ) -> Result<(), MyError> {
     let src = src.as_ref();
     let dst = dst.as_ref();
 
-    check_overwrite(overwrite_links, dst)?;
+    // check_overwrite(dst, overwrite_links, skip_exist_links)?;
 
     // 获取源文件元数据
     // let metadata = fs::metadata(src);
@@ -649,7 +793,7 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(
                     "无法创建文件符号链接 {} -> {}: {}",
                     src.display(),
                     dst.display(),
-                    e
+                    e,
                 ),
             )
         })?;
@@ -676,9 +820,16 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 #[cfg(unix)]
-pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<(), MyError> {
+pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dst: Q,
+    // overwrite_links: bool,
+    // skip_exist_links: bool,
+) -> Result<(), MyError> {
     let src = src.as_ref();
     let dst = dst.as_ref();
+
+    // check_overwrite(dst, overwrite_links, skip_exist_links)?;
 
     std::os::unix::fs::symlink(src, dst).map_err(|e| {
         MyError::new(

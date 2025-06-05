@@ -8,8 +8,14 @@ pub enum ErrorCode {
     IoError = 3,
     FailToMakeDir = 100,
     FailAtMakeLink = 101,
-    FailToGetFathParent = 102,
+    FailToGetPathParent = 102,
     FailToGetFileMetadata = 103,
+    TargetNotALink = 104,
+    TargetLinkExists = 105,
+    TargetExistsAndNotLink = 106,
+    FailToDelLink = 107,
+    SkipExistingLink = 108,
+    DuplicateTarget = 109,
 }
 
 impl fmt::Display for ErrorCode {
@@ -21,8 +27,14 @@ impl fmt::Display for ErrorCode {
             ErrorCode::IoError => write!(f, "IoError"),
             ErrorCode::FailAtMakeLink => write!(f, "Fail At Make Link"),
             ErrorCode::FailToMakeDir => write!(f, "Fail To Make Dir"),
-            ErrorCode::FailToGetFathParent => write!(f, "Fail To Get Fath Parent"),
+            ErrorCode::FailToGetPathParent => write!(f, "Fail To Get Path Parent"),
             ErrorCode::FailToGetFileMetadata => write!(f, "Fail To Get File Metadata"),
+            ErrorCode::TargetNotALink => write!(f, "Target is Not A Link"),
+            ErrorCode::TargetLinkExists => write!(f, "Target Link Already Exists"),
+            ErrorCode::SkipExistingLink => write!(f, "SkipExistingLink"),
+            ErrorCode::FailToDelLink => write!(f, "Fail ToDel Link"),
+            ErrorCode::TargetExistsAndNotLink => write!(f, "Target Exists And is Not a Link"),
+            ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
         }
     }
 }
@@ -33,11 +45,7 @@ pub struct MyError {
     pub msg: String,
 }
 
-#[derive(Debug)]
-pub enum MyResult<T> {
-    Ok(T),
-    Err(MyError),
-}
+pub type MyResult<T> = Result<T, MyError>;
 
 impl fmt::Display for MyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
