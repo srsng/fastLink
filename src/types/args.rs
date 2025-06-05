@@ -87,9 +87,23 @@ pub struct Args {
     #[arg(long, visible_alias("flatten"))]
     pub re_output_flatten: bool,
 
-    /// 覆盖同名已存在的符号链接
-    #[arg(long, visible_alias("overwrite"), visible_alias("overwrite_link"))]
+    /// 覆盖同名已存在的符号链接，与--skip-exist-links互斥
+    #[arg(
+        long,
+        visible_alias("overwrite"),
+        visible_alias("overwrite_link"),
+        conflicts_with = "skip-exist-links"
+    )]
     pub overwrite_links: bool,
+
+    /// 跳过同名已存在的符号链接，与--overwrite-links互斥
+    #[arg(
+        long,
+        visible_alias("skip-exist"),
+        visible_alias("skip-exist-link"),
+        conflicts_with = "overwrite-links"
+    )]
+    pub skip_exist_links: bool,
 
     /// 在目标路径输出/保存/导出本次处理日志
     /// 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log

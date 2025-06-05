@@ -19,6 +19,7 @@ pub struct LinkTaskPre {
     pub only_file: bool,           //只处理文件
     pub only_dir: bool,            //只处理目录
     pub overwrite_links: bool,     // 覆盖已存在的符号链接
+    pub skip_exist_links: bool,
     pub re_no_check: bool,
     pub re_output_flatten: bool,
 
@@ -39,6 +40,7 @@ impl From<&Args> for LinkTaskPre {
             only_file: args.only_file,
             only_dir: args.only_dir,
             overwrite_links: args.overwrite_links,
+            skip_exist_links: args.skip_exist_links,
             re_no_check: args.re_no_check,
             re_output_flatten: args.re_output_flatten,
             ..Default::default()

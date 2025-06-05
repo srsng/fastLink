@@ -24,15 +24,16 @@ pub struct LinkTask {
     pub re_follow_links: bool,     // re匹配过程中深入读取符号链接进行匹配
     pub keep_extention: bool,      // 是否自动保留<SRC>的文件拓展名到[DST]
     pub make_dir: bool,            // 是否自动创建不存在的目录
-    pub only_file: bool,           //只处理文件
-    pub only_dir: bool,            //只处理目录
-    pub overwrite_links: bool,     // 覆盖已存在的符号链接
-    pub re_no_check: bool,
-    pub re_output_flatten: bool,
+    pub only_file: bool,           // 只处理文件
+    pub only_dir: bool,            // 只处理目录
+    pub overwrite_links: bool,     // 覆盖同名已存在的符号链接
+    pub skip_exist_links: bool,    // 跳过同名已存在的符号链接
+    pub re_no_check: bool,         // 跳过用户Re检查
+    pub re_output_flatten: bool,   // 展平输出路径
 
     pub src_path: PathBuf,                              // 规范化后的源路径
     pub dst_path: PathBuf,                              // 规范化后的目标目录路径
-    pub matched_paths: Option<Vec<(PathBuf, PathBuf)>>, // 匹配的源路径和目标路径对
+    pub matched_paths: Option<Vec<(PathBuf, PathBuf)>>, // 匹配的源相对路径和目标相对路径
     pub dirs_to_create: Option<Vec<PathBuf>>,           // 需要创建的目标父目录
 }
 
@@ -157,15 +158,22 @@ impl LinkTask {
         self.apply_re(None)?;
         match &self.re_pattern {
             Some(_) => {
+                if self
+                    .matched_paths
+                    .as_ref()
+                    .map_or(true, |paths| paths.is_empty())
+                {
+                    log::warn!("当前Re匹配的路径为空");
+                    return Ok(());
+                }
+
                 if let Some(paths) = self.matched_paths.as_ref() {
-                    if paths.is_empty() {
-                        log::warn!("当前Re匹配的路径为空");
-                        return Ok(());
-                    }
                     // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
+                    // 返回Ok(false)则取消创建
                     if !display_paginated_paths(paths, 10, self.re_no_check)? {
                         return Ok(());
                     }
+
                     // 批量创建所有需要的目录
                     log::info!("创建符号链接需要目录中");
                     if self.make_dir {
@@ -179,16 +187,19 @@ impl LinkTask {
                     log::info!("目录创建完成");
 
                     log::info!("符号链接创建中");
-                    for (src, dst) in paths.iter() {
-                        let dst = &self.dst_path.join(dst);
+                    for (src, dst) in paths {
                         log::debug!("{} -> {}", src.display(), dst.display());
                         mklink(src, dst, Some(self.overwrite_links))?;
                     }
-                    log::info!("符号链接创建完成！")
+                    log::info!("符号链接创建完成！");
+
+                    Ok(())
                 } else {
-                    log::error!("未应用Re检查")
+                    Err(MyError::new(
+                        ErrorCode::Unknown,
+                        "Unknown Error: 初始化后的路径对列表为None".into(),
+                    ))
                 }
-                Ok(())
             }
             None => {
                 if self.only_dir && self.src_path.is_file() {
@@ -355,7 +366,7 @@ impl LinkTask {
                             .push(path.to_path_buf());
                     }
 
-                    matched_paths.push((path.to_path_buf(), target_path));
+                    matched_paths.push((relative_path.to_path_buf(), target_path));
                 }
             }
         }
