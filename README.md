@@ -4,7 +4,7 @@ A tool to make symlink fastly and smartly, support regex
 
 For Windows (at present)
 
-不需要`sudo`或者`管理员权限`
+不需要`sudo`或者`管理员权限`  
 Do not need `sudo` or `administrator` 
 
 ## Usage (not up to date yet)
@@ -89,7 +89,7 @@ Options:
 
 ```
 
-## Example：
+## Example
 ```bash
     # 在当前目录创建一个名为document的符号链接
     fastlink document.txt
@@ -115,6 +115,11 @@ Options:
     # 将./test-dir目录及其子目录或更深目录中所有txt文件 -> 直接创建链接到output目录中，不包含文件夹（可包含对文件夹的符号链接）
     fastlink ./test-dir output --re .*\.txt --flatten
 ```
+
+## 未来计划
+ [] 支持 Unix | support Unix
+ [] 完善测试
+ [] 分发轻量版二进制程序（不支持re等特性）
 
 ## Feedback
 If something not excepet happened, open an issue and paste the log wiht `--debug` argument  
