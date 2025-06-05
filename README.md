@@ -119,7 +119,7 @@ Options:
 ## 未来计划
 - [ ] 支持 Unix | support Unix  
 - [ ] 完善测试  
-- [ ] 分发轻量版二进制程序（不支持re等特性）  
+- [ ] release轻量版二进制程序（不支持re等特性）  
 
 ## Feedback
 If something not excepet happened, open an issue and paste the log wiht `--debug` argument  
