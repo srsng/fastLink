@@ -2,7 +2,7 @@ use crate::types::err::{ErrorCode, MyError};
 use std::path::Path;
 
 /// 创建目录
-pub fn mkdirs(path: &Path) -> Result<(), MyError> {
+pub fn mkdirs<P: AsRef<Path>>(path: P) -> Result<(), MyError> {
     let res = std::fs::create_dir_all(path);
     match res {
         Err(e) => Err(MyError::new(ErrorCode::FailToMakeDir, format!("{}", e))),

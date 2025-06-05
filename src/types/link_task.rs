@@ -45,7 +45,7 @@ fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
         .enumerate()
         .map(|(i, (src, dst))| {
             format!(
-                "{:4}. {PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#} -> {PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#}",
+                "{:4}. <SRC>{PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#} -> [DST]{PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#}",
                 i + 1,
                 src.parent().unwrap_or_else(|| Path::new("")).display(),
                 src.file_name().unwrap_or(OsStr::new("[error: Unknown]")),
@@ -162,7 +162,7 @@ impl LinkTask {
                 if self
                     .matched_paths
                     .as_ref()
-                    .map_or(true, |paths| paths.is_empty())
+                    .is_none_or(|paths| paths.is_empty())
                 {
                     log::warn!("当前Re匹配的路径为空");
                     return Ok(());
@@ -180,10 +180,10 @@ impl LinkTask {
                     if self.make_dir {
                         if let Some(dirs) = self.dirs_to_create.as_ref() {
                             for dir in dirs {
-                                // if !dir.exists() {
-                                mkdirs(dir)?;
-                                log::info!("已创建目录: {}", dir.display());
-                                // }
+                                if !dir.exists() {
+                                    mkdirs(dir)?;
+                                    log::info!("已创建目录: {}", dir.display());
+                                }
                             }
                         }
                     }
@@ -292,8 +292,9 @@ impl LinkTask {
         log::debug!("validate_dst/dst: {}", dst.display());
 
         let dst_parent_option = dst.parent();
-        // dst父目录不存在
-        handle_validate_dst_parent_not_exist(dst, self.make_dir, dst_parent_option)
+        // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
+        let dst = handle_validate_dst_parent_not_exist(dst, self.make_dir, dst_parent_option)?;
+        handle_validate_dst_dir_not_exists(dst, self.make_dir)
     }
 
     /// 包装apply_re相关逻辑，通过_apply_re完成应用re检查，修改matched_paths, dirs_to_create
@@ -534,8 +535,27 @@ fn canonicalize_path(path: &Path) -> Result<PathBuf, MyError> {
         Ok(WORK_DIR.join(path.clean()))
     }
 }
+/// validate_dst函数辅助函数
+/// 参数--md不为true时，若其本身是目录且不存在，则报错
+fn handle_validate_dst_dir_not_exists(dst: PathBuf, make_dir: bool) -> Result<PathBuf, MyError> {
+    if dst.is_dir() && !dst.exists() {
+        if make_dir {
+            // 创建目录
+            mkdirs(&dst)?;
+            Ok(dst)
+        } else {
+            Err(MyError::new(
+                ErrorCode::InvalidInput,
+                format!("目录 {} 不存在，若需自动创建请添加--md参数", dst.display()),
+            ))
+        }
+    } else {
+        Ok(dst)
+    }
+}
 
-/// 为validate_dst函数处理dst父目录不存在的情况
+/// validate_dst函数辅助函数
+/// 参数--md不为true时，若dst父目录不存在，则报错
 fn handle_validate_dst_parent_not_exist(
     dst: &Path,
     make_dir: bool,
