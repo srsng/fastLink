@@ -66,19 +66,19 @@ pub struct Args {
     pub re_max_depth: Option<usize>,
 
     /// 只处理文件，同时传入only_dir则出错
-    #[arg(long, conflicts_with = "only_dir", visible_alias("F"))]
+    #[arg(long, conflicts_with = "only-dir", visible_alias("F"))]
     pub only_file: bool,
 
     /// 只处理目录，同时传入only_file则出错
-    #[arg(long, conflicts_with = "only_file", visible_alias("D"))]
+    #[arg(long, conflicts_with = "only-file", visible_alias("D"))]
     pub only_dir: bool,
 
     /// re匹配过程中，深入读取符号链接进行匹配
-    #[arg(long, visible_alias("follow_links"), visible_alias("follow_link"))]
+    #[arg(long, visible_alias("follow-links"), visible_alias("follow-link"))]
     pub re_follow_links: bool,
 
     /// 取消re匹配后，创建链接前的用户手动检查阶段
-    #[arg(long, visible_alias("no_check"))]
+    #[arg(long, visible_alias("no-check"))]
     pub re_no_check: bool,
 
     /// 对于re匹配的后所有内容，不按照原本目录（镜像）创建链接，

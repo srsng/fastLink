@@ -5,6 +5,11 @@ use std::{
     // path::PathBuf
 };
 
+// 设置文件颜色（绿色）
+pub const FILE_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(19, 161, 14))));
+// 设置父目录颜色（灰色）
+pub const PARENT_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(150, 150, 150))));
+
 pub fn init_log(quiet: bool, debug: bool, _save_log: &Option<String>) {
     // 初始化日志系统
     let mut builder = env_logger::Builder::new();

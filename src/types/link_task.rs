@@ -2,6 +2,7 @@ use crate::types::args::{get_re_max_depth, Args};
 use crate::types::err::{ErrorCode, MyError};
 use crate::types::link_task_pre::LinkTaskPre;
 use crate::utils::func::mkdirs;
+use crate::utils::logs::{FILE_STYLE, PARENT_STYLE};
 use path_clean::PathClean;
 use regex::Regex;
 use std::convert::TryFrom;
@@ -11,6 +12,8 @@ use std::io::{self, Write};
 use std::os::windows::fs::{symlink_dir, symlink_file};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
+
+const MAIN_SEPARATOR: char = std::path::MAIN_SEPARATOR;
 
 #[derive(Debug, Default)]
 pub struct LinkTask {
@@ -33,12 +36,21 @@ pub struct LinkTask {
     pub dirs_to_create: Option<Vec<PathBuf>>,           // 需要创建的目标父目录
 }
 
-/// Formats a slice of path pairs into a readable string.
+/// 格式化匹配的路径对
 fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
     paths
         .iter()
         .enumerate()
-        .map(|(i, (src, dst))| format!("{:4}. {} -> {}", i + 1, src.display(), dst.display()))
+        .map(|(i, (src, dst))| {
+            format!(
+                "{:4}. {PARENT_STYLE}{}{PARENT_STYLE:#}{MAIN_SEPARATOR}{FILE_STYLE}{:?}{FILE_STYLE:#} -> {PARENT_STYLE}{}{PARENT_STYLE:#}{MAIN_SEPARATOR}{FILE_STYLE}{:?}{FILE_STYLE:#}",
+                i + 1,
+                src.parent().unwrap_or_else(|| Path::new("")).display(),
+                src.file_name().unwrap_or(OsStr::new("[error: Unknown]")),
+                dst.parent().unwrap_or_else(|| Path::new("")).display(),
+                dst.file_name().unwrap_or(OsStr::new("[error: Unknown]")),
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -58,7 +70,7 @@ fn display_paginated_paths(
     let end = page_size.min(total_paths);
     let page_paths = &paths[0..end];
     log::info!(
-        "\n匹配的路径 (1 到 {}，共 {} 条):\n{}",
+        "\n创建前检查：匹配的路径 (1 到 {}，共 {} 条):\n{}",
         end,
         total_paths,
         format_matched_paths(page_paths)
@@ -73,6 +85,9 @@ fn display_paginated_paths(
     start += page_size;
     loop {
         let end = (start + page_size).min(total_paths);
+        if start >= end {
+            break;
+        }
         let page_paths = &paths[start..end];
         log::info!(
             "\n匹配的路径 ({} 到 {}，共 {} 条):\n{}",
