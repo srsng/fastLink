@@ -7,6 +7,8 @@ For Windows (at present)
 不需要`sudo`或者`管理员权限`  
 Do not need `sudo` or `administrator`   
 
+![example](image/README/example.png)
+
 ## Usage (not up to date yet)
 ```cmd
 Usage: fastlink.exe [OPTIONS] <SRC> [DST]
@@ -24,7 +26,7 @@ Options:
 
       --make-dir
           自动创建不存在的目录
-          
+
           [aliases: --md]
 
   -q, --quiet
@@ -34,49 +36,59 @@ Options:
           输出debug level的日志
 
       --regex <REGEX>
-          对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建， 若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建， 若要限制深度，使用--re-max-depth参数。 匹配的路径不受--keep_extention参数影响。
-          
+          对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建， 若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建， 若要限制深度，使用--re-max-depth参数。 匹配的路径不受--keep_extention参数 影响。
+
           [aliases: --re]
 
       --re-max-depth <RE_MAX_DEPTH>
           限制regex匹配的最大深度，启用make_dir参数时，默认4层，否则为1层, 传入0表示没有层数限制. 该参数数值非负
-          
+
           [aliases: --re-depth]
 
       --only-file
           只处理文件，同时传入only-dir则出错
-          
+
           [aliases: --F]
 
       --only-dir
           只处理目录，同时传入only-file则出错
-          
+
           [aliases: --D]
 
       --re-follow-links
           re匹配过程中，深入读取符号链接进行匹配
-          
+
           [aliases: --follow-links, --follow-link]
 
       --re-no-check
           取消re匹配后，创建链接前的用户手动检查阶段
-          
+
           [aliases: --no-check]
 
       --re-output-flatten
           对于re匹配的后所有内容，不按照原本目录（镜像）创建链接， 而是直接创建到[DST]中。 如果匹配的文件名有重复，则会拒绝创建并报错
-          
+
           [aliases: --flatten]
 
       --overwrite-links
           覆盖同名已存在的符号链接，与--skip-exist-links互斥
-          
-          [aliases: --overwrite, --over-write, --overwrite-link]
+
+          [aliases: --overwrite, --overwrite-link]
+
+      --overwrite-broken-link
+          --overwrite-links的较弱版本，但优先级高于--skip-exist-link，只覆盖损坏的符号链接. 默认为true, 暂不支持关闭
+
+          [aliases: --overwrite-broken]
 
       --skip-exist-links
-          跳过同名已存在的符号链接，与--overwrite-links互斥
-          
-          [aliases: --skip-exist, --skip-exists, --skip-exist-link]
+          针对[DST]，跳过同名已存在的符号链接，与--overwrite-links互斥
+
+          [aliases: --skip-exist, --skip-exists, --skip-exist-link, --skip-exist-links]
+
+      --skip-broken-src-links
+          针对<SRC>，跳过损坏的符号链接. 默认为true, 暂不支持关闭
+
+          [aliases: --skip-broken, --skip-broken-link, --skip-broken-links]
 
       --save-log <SAVE_LOG>
           在目标路径输出/保存/导出本次处理日志 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log
@@ -86,7 +98,6 @@ Options:
 
   -V, --version
           Print version
-
 ```
 
 ## Example

@@ -4,6 +4,7 @@ use std::fmt;
 pub enum ErrorCode {
     Unknown = -1,
     ParentNotExist = 1,
+    FileNotExist = 4,
     InvalidInput = 2,
     IoError = 3,
     FailToMakeDir = 100,
@@ -15,7 +16,9 @@ pub enum ErrorCode {
     TargetExistsAndNotLink = 106,
     FailToDelLink = 107,
     SkipExistingLink = 108,
-    DuplicateTarget = 109,
+
+    DuplicateTarget = 201,
+    BrokenSymlink = 202,
 }
 
 impl fmt::Display for ErrorCode {
@@ -23,6 +26,7 @@ impl fmt::Display for ErrorCode {
         match self {
             ErrorCode::Unknown => write!(f, "Unknown"),
             ErrorCode::ParentNotExist => write!(f, "ParentNotExist"),
+            ErrorCode::FileNotExist => write!(f, "FileNotExist"),
             ErrorCode::InvalidInput => write!(f, "InvalidInput"),
             ErrorCode::IoError => write!(f, "IoError"),
             ErrorCode::FailAtMakeLink => write!(f, "Fail At Make Link"),
@@ -35,6 +39,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::FailToDelLink => write!(f, "Fail ToDel Link"),
             ErrorCode::TargetExistsAndNotLink => write!(f, "Target Exists And is Not a Link"),
             ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
+            ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),
         }
     }
 }
@@ -63,8 +68,11 @@ impl MyError {
     pub fn new(code: ErrorCode, msg: String) -> Self {
         MyError { code, msg }
     }
-    pub fn log(self) {
+    pub fn log(&self) {
         log::error!("{}", self);
+    }
+    pub fn warn(&self) {
+        log::warn!("{}", self);
     }
 }
 

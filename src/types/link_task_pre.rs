@@ -1,7 +1,7 @@
 use crate::types::args::Args;
 use crate::types::args::DEFAULT_RE_MAX_DEPTH;
 use crate::types::err::{ErrorCode, MyError};
-use crate::utils::func::mkdirs;
+use crate::utils::func::{mkdirs, mklink_pre_check};
 use path_clean::PathClean;
 use regex::Regex;
 use std::ffi::OsStr;
@@ -9,17 +9,19 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
 pub struct LinkTaskPre {
-    pub src_ori: String,           // 原始源路径
-    pub dst_ori: Option<String>,   // 原始目标路径
-    pub re_pattern: Option<Regex>, // 正则表达式模式
-    pub re_max_depth: usize,       // 正则表达式模式最大深度
-    pub re_follow_links: bool,     // re匹配过程中深入读取符号链接进行匹配
-    pub keep_extention: bool,      // 是否自动保留<SRC>的文件拓展名到[DST]
-    pub make_dir: bool,            // 是否自动创建不存在的目录
-    pub only_file: bool,           //只处理文件
-    pub only_dir: bool,            //只处理目录
-    pub overwrite_links: bool,     // 覆盖已存在的符号链接
+    pub src_ori: String,             // 原始源路径
+    pub dst_ori: Option<String>,     // 原始目标路径
+    pub re_pattern: Option<Regex>,   // 正则表达式模式
+    pub re_max_depth: usize,         // 正则表达式模式最大深度
+    pub re_follow_links: bool,       // re匹配过程中深入读取符号链接进行匹配
+    pub keep_extention: bool,        // 是否自动保留<SRC>的文件拓展名到[DST]
+    pub make_dir: bool,              // 是否自动创建不存在的目录
+    pub only_file: bool,             //只处理文件
+    pub only_dir: bool,              //只处理目录
+    pub overwrite_links: bool,       // 覆盖已存在的符号链接
+    pub overwrite_broken_link: bool, // 覆盖同名已存在的损坏的符号链接
     pub skip_exist_links: bool,
+    pub skip_broken_src_links: bool,
     pub re_no_check: bool,
     pub re_output_flatten: bool,
 
@@ -40,7 +42,9 @@ impl From<&Args> for LinkTaskPre {
             only_file: args.only_file,
             only_dir: args.only_dir,
             overwrite_links: args.overwrite_links,
+            overwrite_broken_link: args.overwrite_broken_link,
             skip_exist_links: args.skip_exist_links,
+            skip_broken_src_links: args.skip_broken_src_links,
             re_no_check: args.re_no_check,
             re_output_flatten: args.re_output_flatten,
             ..Default::default()
@@ -62,20 +66,18 @@ impl LinkTaskPre {
     pub fn check_src(&mut self) -> Result<(), MyError> {
         let src_abs_res = dunce::canonicalize(&self.src_ori);
         if let Err(e) = src_abs_res {
-            // self.error = Some(format!(
-            //     "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>: {}",
-            //     &self.src_ori, e
-            // ));
-            // log::error!("{:?}", self.error);
             Err(MyError::new(
                 ErrorCode::InvalidInput,
                 format!(
-                    "请检查<SRC>'{}'是否存在. Fail to canonicalize <SRC>: {}",
+                    "请检查<SRC>'{}'是否存在 (或是否为损坏的符号链接). Fail to canonicalize <SRC>: {}",
                     &self.src_ori, e
                 ),
             ))
         } else {
-            self.src_path = Some(src_abs_res.unwrap());
+            let src_path = src_abs_res.unwrap();
+            let res = mklink_pre_check(&src_path);
+            handle_mklink_pre_check_error_for_src(res)?;
+            self.src_path = Some(src_path);
             Ok(())
         }
     }
@@ -237,5 +239,24 @@ fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: PathBuf) -> Result<PathBuf
                 e
             ),
         )),
+    }
+}
+
+/// 为检查src是否是损坏符号链接进行错误处理
+pub fn handle_mklink_pre_check_error_for_src(res: Result<(), MyError>) -> Result<(), MyError> {
+    if let Some(e) = res.err() {
+        match e.code {
+            ErrorCode::FileNotExist => Ok(()),
+            ErrorCode::TargetExistsAndNotLink => Ok(()),
+            ErrorCode::TargetLinkExists => Ok(()),
+            // // 目标路径已存在且损坏的符号链接
+            // ErrorCode::BrokenSymlink => {
+            //     e.log();
+            //     Err(e)
+            // }
+            _ => Err(e),
+        }
+    } else {
+        Ok(())
     }
 }

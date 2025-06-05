@@ -102,21 +102,37 @@ pub struct Args {
     #[arg(
         long,
         visible_alias("overwrite"),
-        visible_alias("over-write"),
         visible_alias("overwrite-link"),
         conflicts_with = "skip_exist_links"
     )]
     pub overwrite_links: bool,
 
-    /// 跳过同名已存在的符号链接，与--overwrite-links互斥
+    /// --overwrite-links的较弱版本，但优先级高于--skip-exist-link，只覆盖损坏的符号链接.
+    /// 默认为true, 暂不支持关闭
+    #[arg(long, visible_alias("overwrite-broken"), default_value_t = true)]
+    pub overwrite_broken_link: bool,
+
+    /// 针对[DST]，跳过同名已存在的符号链接，与--overwrite-links互斥
     #[arg(
         long,
         visible_alias("skip-exist"),
         visible_alias("skip-exists"),
         visible_alias("skip-exist-link"),
+        visible_alias("skip-exist-links"),
         conflicts_with = "overwrite_links"
     )]
     pub skip_exist_links: bool,
+
+    /// 针对<SRC>，跳过损坏的符号链接.
+    /// 默认为true, 暂不支持关闭
+    #[arg(
+        long,
+        visible_alias("skip-broken"),
+        visible_alias("skip-broken-link"),
+        visible_alias("skip-broken-links"),
+        default_value_t = true
+    )]
+    pub skip_broken_src_links: bool,
 
     /// 在目标路径输出/保存/导出本次处理日志
     /// 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log
