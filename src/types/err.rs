@@ -37,7 +37,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::TargetNotALink => write!(f, "Target is Not A Link"),
             ErrorCode::TargetLinkExists => write!(f, "Target Link Already Exists"),
             ErrorCode::SkipExistingLink => write!(f, "SkipExistingLink"),
-            ErrorCode::FailToDelLink => write!(f, "Fail ToDel Link"),
+            ErrorCode::FailToDelLink => write!(f, "Fail To Del Link"),
             ErrorCode::TargetExistsAndNotLink => write!(f, "Target Exists And is Not a Link"),
             ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
             ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),

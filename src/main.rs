@@ -69,12 +69,16 @@ fn handle_sub_command(args: Args) {
     let src_path = Path::new(&args.src);
     if check {
         handle_check_command(src_path);
+        if rm {
+            log::warn!("rm模式请单独使用");
+        }
     } else if rm {
         handle_rm_command(src_path);
     }
 }
 
 fn handle_check_command(src: &Path) {
+    log::info!("[check模式(--check)]");
     match mklink_pre_check(src) {
         Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
             let filetype = if src.is_dir() {
@@ -95,8 +99,8 @@ fn handle_check_command(src: &Path) {
         Err(e) if e.code == ErrorCode::TargetLinkExists => {
             let target = std::fs::read_link(src);
             match target {
-                Ok(dst) => log::warn!("{} 是符号链接，指向 {}", src.display(), dst.display()),
-                Err(e) => log::warn!("{} 是符号链接，指向未知，获取时出错：{}", src.display(), e),
+                Ok(dst) => log::info!("{} 是符号链接，指向 {}", src.display(), dst.display()),
+                Err(e) => log::error!("{} 是符号链接，指向未知，获取时出错：{}", src.display(), e),
             };
         }
         _ => log::warn!("未知错误"),
@@ -104,6 +108,7 @@ fn handle_check_command(src: &Path) {
 }
 
 fn handle_rm_command(src: &Path) {
+    log::info!("[rm模式(--rm)]");
     let del_link = true;
     match del_exists_link(src, del_link) {
         Ok(_) => (),
