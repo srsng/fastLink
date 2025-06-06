@@ -1,30 +1,17 @@
 use crate::types::args::Args;
-use crate::types::args::DEFAULT_RE_MAX_DEPTH;
-use crate::types::err::{ErrorCode, MyError};
-use crate::utils::func::{mkdirs, mklink_pre_check};
+use crate::types::err::{ErrorCode, MyError, MyResult};
+use crate::types::link_task_args::LinkTaskArgs;
+use crate::utils::func::mkdirs;
 use path_clean::PathClean;
-use regex::Regex;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+/// 创建链接任务的准备
+/// 负责解析、规范、验证路径src、dst
+/// 可通过from或try_new构建
 #[derive(Debug, Default)]
 pub struct LinkTaskPre {
-    pub src_ori: String,             // 原始源路径
-    pub dst_ori: Option<String>,     // 原始目标路径
-    pub re_pattern: Option<Regex>,   // 正则表达式模式
-    pub re_max_depth: usize,         // 正则表达式模式最大深度
-    pub re_follow_links: bool,       // re匹配过程中深入读取符号链接进行匹配
-    pub keep_extention: bool,        // 是否自动保留<SRC>的文件拓展名到[DST]
-    pub make_dir: bool,              // 是否自动创建不存在的目录
-    pub only_file: bool,             //只处理文件
-    pub only_dir: bool,              //只处理目录
-    pub overwrite_links: bool,       // 覆盖已存在的符号链接
-    pub overwrite_broken_link: bool, // 覆盖同名已存在的损坏的符号链接
-    pub skip_exist_links: bool,
-    pub skip_broken_src_links: bool,
-    pub re_no_check: bool,
-    pub re_output_flatten: bool,
-
+    pub args: LinkTaskArgs,        // 创建链接需要的一些参数
     pub src_path: Option<PathBuf>, // 规范化后的源路径
     pub dst_path: Option<PathBuf>, // 规范化后的目标目录路径
 }
@@ -32,23 +19,23 @@ pub struct LinkTaskPre {
 impl From<&Args> for LinkTaskPre {
     fn from(args: &Args) -> Self {
         LinkTaskPre {
-            src_ori: args.src.clone(),
-            dst_ori: args.dst.clone(),
-            re_pattern: args.regex.clone(),
-            re_max_depth: args.re_max_depth.unwrap_or(DEFAULT_RE_MAX_DEPTH),
-            re_follow_links: args.re_follow_links,
-            keep_extention: args.keep_extention,
-            make_dir: args.make_dir,
-            only_file: args.only_file,
-            only_dir: args.only_dir,
-            overwrite_links: args.overwrite_links,
-            overwrite_broken_link: args.overwrite_broken_link,
-            skip_exist_links: args.skip_exist_links,
-            skip_broken_src_links: args.skip_broken_src_links,
-            re_no_check: args.re_no_check,
-            re_output_flatten: args.re_output_flatten,
-            ..Default::default()
+            args: LinkTaskArgs::from(args),
+            src_path: None,
+            dst_path: None,
         }
+    }
+}
+
+impl LinkTaskPre {
+    /// 创建一个已经完成解析src、dst的 LinkTaskPre
+    pub fn try_new(args: LinkTaskArgs) -> MyResult<Self> {
+        let mut task_pre = LinkTaskPre {
+            args,
+            src_path: None,
+            dst_path: None,
+        };
+        task_pre.parse()?;
+        Ok(task_pre)
     }
 }
 
@@ -61,23 +48,20 @@ impl LinkTaskPre {
         Ok(())
     }
 
-    /// 解析、规范、验证src
+    /// 解析、规范、验证src,
     /// 并将结果存于src_path
     pub fn check_src(&mut self) -> Result<(), MyError> {
-        let src_abs_res = dunce::canonicalize(&self.src_ori);
+        let src_abs_res = dunce::canonicalize(&self.args.src);
         if let Err(e) = src_abs_res {
             Err(MyError::new(
                 ErrorCode::InvalidInput,
                 format!(
                     "请检查<SRC>'{}'是否存在 (或是否为损坏的符号链接). Fail to canonicalize <SRC>: {}",
-                    &self.src_ori, e
+                    &self.args.src, e
                 ),
             ))
         } else {
-            let src_path = src_abs_res.unwrap();
-            // let res = mklink_pre_check(&src_path);
-            // handle_mklink_pre_check_error_for_src(res)?;
-            self.src_path = Some(src_path);
+            self.src_path = Some(src_abs_res.unwrap());
             Ok(())
         }
     }
@@ -95,15 +79,17 @@ impl LinkTaskPre {
     /// 解析dst参数并转化为路径
     /// 为[DST]自动追加<SRC>名称、拓展名都在这实现
     pub fn parse_args_dst(&mut self) -> Result<PathBuf, MyError> {
-        let src_path = Path::new(&self.src_ori);
-        let mut final_dst = match &self.dst_ori {
+        let src_path = Path::new(&self.args.src);
+        let mut final_dst = match &self.args.dst {
             Some(d) => {
                 // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
                 let dst_path = Path::new(&d);
-                if src_path.is_file() && dst_path.is_dir() {
-                    canonicalize_path(&dst_path.join(default_dst_path(src_path)))
+                let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
+                // 规范化
+                if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
+                    canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
                 } else {
-                    canonicalize_path(&PathBuf::from(d))
+                    canonicalize_path(&PathBuf::from(d))?
                 }
             }
             // 没有传入DST: 使用SRC文件名
@@ -111,7 +97,7 @@ impl LinkTaskPre {
         };
 
         // 处理keep_extension: 是否保留拓展名
-        process_extension(src_path, &mut final_dst, self.keep_extention);
+        process_extension(src_path, &mut final_dst, self.args.keep_extention);
 
         Ok(final_dst.clean())
     }
@@ -123,8 +109,9 @@ impl LinkTaskPre {
         log::debug!("validate_dst/dst: {}", dst.display());
 
         let dst_parent_option = dst.parent();
-        // dst父目录不存在
-        handle_validate_dst_parent_not_exist(dst, self.make_dir, dst_parent_option)
+        // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
+        let dst = handle_validate_dst_parent_not_exist(dst, self.args.make_dir, dst_parent_option)?;
+        handle_validate_dst_dir_not_exists(dst, self.args.make_dir)
     }
 }
 
@@ -160,13 +147,10 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
                 // 不用std::path::MAIN_SEPARATOR判断是因为用户经常混用`\`与`/`
                 #[cfg(windows)]
                 let is_dir = dst.is_dir()
-                    || (!dst.to_str().unwrap_or_default().is_empty()
-                        && (dst_str.ends_with('/') || dst_str.ends_with('\\')));
+                    || (!dst_str.is_empty() && (dst_str.ends_with('/') || dst_str.ends_with('\\')));
                 #[cfg(not(windows))]
                 let is_dir = dst.is_dir()
-                    || (!dst.to_str().unwrap_or_default().is_empty()
-                        && dst_str.ends_with(std::path::MAIN_SEPARATOR));
-
+                    || (!dst_str.is_empty() && dst_str.ends_with(std::path::MAIN_SEPARATOR));
                 if !is_dir && dst_path.extension().is_none() && !src_ext.is_empty() {
                     let new_name = format!(
                         "{}.{}",
@@ -182,17 +166,43 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
 }
 
 /// 路径规范化
-fn canonicalize_path(path: &Path) -> PathBuf {
+fn canonicalize_path(path: &Path) -> Result<PathBuf, MyError> {
     if path.is_absolute() {
-        path.to_path_buf().clean()
+        Ok(path.to_path_buf().clean())
     } else {
-        std::env::current_dir()
-            .expect("Failed to get current directory")
-            .join(path.clean())
+        // let curdir = std::env::current_dir();
+        // match curdir {
+        //     Ok(curdir) => Ok(curdir.join(path.clean())),
+        //     Err(e) => Err(MyError::new(
+        //         ErrorCode::Unknown,
+        //         format!("Failed to get current directory: {}", e),
+        //     )),
+        // }
+        Ok(crate::WORK_DIR.join(path.clean()))
     }
 }
 
-/// 为validate_dst函数处理dst父目录不存在的情况
+/// validate_dst函数辅助函数
+/// 参数--md不为true时，若其本身是目录且不存在，则报错
+fn handle_validate_dst_dir_not_exists(dst: PathBuf, make_dir: bool) -> Result<PathBuf, MyError> {
+    if dst.is_dir() && !dst.exists() {
+        if make_dir {
+            // 创建目录
+            mkdirs(&dst)?;
+            Ok(dst)
+        } else {
+            Err(MyError::new(
+                ErrorCode::InvalidInput,
+                format!("目录 {} 不存在，若需自动创建请添加--md参数", dst.display()),
+            ))
+        }
+    } else {
+        Ok(dst)
+    }
+}
+
+/// validate_dst函数辅助函数
+/// 参数--md不为true时，若dst父目录不存在，则报错
 fn handle_validate_dst_parent_not_exist(
     dst: &Path,
     make_dir: bool,

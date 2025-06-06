@@ -1,6 +1,6 @@
 // todo: 编写tests
 // todo：编写文档
-// todo:清理无用代码
+// todo: 清理无用代码
 // 其他行内todo
 
 use clap::Parser;
@@ -44,9 +44,6 @@ fn main() {
 
     let task_res = LinkTask::try_from(&args);
 
-    // task_res
-    //     .map(|mut task| task.mklinks().map_err(|e| e.log()))
-    //     .map_err(|e| e.log());
     match task_res {
         Ok(mut task) => match task.mklinks() {
             Ok(()) => (),
