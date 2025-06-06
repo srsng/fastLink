@@ -42,77 +42,75 @@ impl LinkTaskPre {
 impl LinkTaskPre {
     pub fn parse(&mut self) -> Result<(), MyError> {
         // 获取src_path
-        self.check_src()?;
+        self.src_path = Some(check_src(&self.args)?);
         // 获取dst_path
-        self.check_dst()?;
+        self.dst_path = Some(check_dst(&self.args)?);
         Ok(())
     }
+}
 
-    /// 解析、规范、验证src,
-    /// 并将结果存于src_path
-    pub fn check_src(&mut self) -> Result<(), MyError> {
-        let src_abs_res = dunce::canonicalize(&self.args.src);
-        if let Err(e) = src_abs_res {
-            Err(MyError::new(
-                ErrorCode::InvalidInput,
-                format!(
-                    "请检查<SRC>'{}'是否存在 (或是否为损坏的符号链接). Fail to canonicalize <SRC>: {}",
-                    &self.args.src, e
-                ),
-            ))
-        } else {
-            self.src_path = Some(src_abs_res.unwrap());
-            Ok(())
-        }
+/// 解析、规范、验证src,
+/// 并将结果存于src_path
+pub fn check_src(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
+    let src_abs_res = dunce::canonicalize(&task_args.src);
+    if let Err(e) = src_abs_res {
+        Err(MyError::new(
+            ErrorCode::InvalidInput,
+            format!(
+                "请检查<SRC>'{}'是否存在 (或是否为损坏的符号链接). Fail to canonicalize <SRC>: {}",
+                &task_args.src, e
+            ),
+        ))
+    } else {
+        Ok(src_abs_res.unwrap())
     }
+}
 
-    /// 解析dst, 验证dst路径的父目录是否存在,
-    /// 并将结果存放在dst_path
-    pub fn check_dst(&mut self) -> Result<(), MyError> {
-        // 解析dst
-        let dst_path = self.parse_args_dst()?;
-        // 验证dst路径父目录
-        self.dst_path = Some(self.validate_dst(&dst_path)?);
-        Ok(())
-    }
+/// 解析dst, 验证dst路径的父目录是否存在,
+/// 并将结果存放在dst_path
+pub fn check_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
+    // 解析dst
+    let dst_path = parse_args_dst(task_args)?;
+    // 验证dst路径父目录
+    validate_dst(task_args, &dst_path)
+}
 
-    /// 解析dst参数并转化为路径
-    /// 为[DST]自动追加<SRC>名称、拓展名都在这实现
-    pub fn parse_args_dst(&mut self) -> Result<PathBuf, MyError> {
-        let src_path = Path::new(&self.args.src);
-        let mut final_dst = match &self.args.dst {
-            Some(d) => {
-                // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
-                let dst_path = Path::new(&d);
-                let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
-                // 规范化
-                if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
-                    canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
-                } else {
-                    canonicalize_path(&PathBuf::from(d))?
-                }
+/// 解析dst参数并转化为路径
+/// 为[DST]自动追加<SRC>名称、拓展名都在这实现
+pub fn parse_args_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
+    let src_path = Path::new(&task_args.src);
+    let mut final_dst = match &task_args.dst {
+        Some(d) => {
+            // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
+            let dst_path = Path::new(&d);
+            let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
+            // 规范化
+            if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
+                canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
+            } else {
+                canonicalize_path(&PathBuf::from(d))?
             }
-            // 没有传入DST: 使用SRC文件名
-            None => default_dst_path(src_path),
-        };
+        }
+        // 没有传入DST: 使用SRC文件名
+        None => default_dst_path(src_path),
+    };
 
-        // 处理keep_extension: 是否保留拓展名
-        process_extension(src_path, &mut final_dst, self.args.keep_extention);
+    // 处理keep_extension: 是否保留拓展名
+    final_dst = process_extension(src_path, final_dst, task_args.keep_extention);
 
-        Ok(final_dst.clean())
-    }
+    Ok(final_dst.clean())
+}
 
-    /// 返回规范化后的dst绝对路径
-    /// 若其父目录不存在且make_dir为false，则将返回Err
-    pub fn validate_dst(&mut self, dst: &Path) -> Result<PathBuf, MyError> {
-        // dst: &Path, make_dir: bool
-        log::debug!("validate_dst/dst: {}", dst.display());
+/// 返回规范化后的dst绝对路径
+/// 若其父目录不存在且make_dir为false，则将返回Err
+pub fn validate_dst(task_args: &LinkTaskArgs, dst: &Path) -> Result<PathBuf, MyError> {
+    // dst: &Path, make_dir: bool
+    log::debug!("validate_dst/dst: {}", dst.display());
 
-        let dst_parent_option = dst.parent();
-        // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
-        let dst = handle_validate_dst_parent_not_exist(dst, self.args.make_dir, dst_parent_option)?;
-        handle_validate_dst_dir_not_exists(dst, self.args.make_dir)
-    }
+    let dst_parent_option = dst.parent();
+    // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
+    let dst = handle_validate_dst_parent_not_exist(dst, task_args.make_dir, dst_parent_option)?;
+    handle_validate_dst_dir_not_exists(dst, task_args.make_dir)
 }
 
 /// 生成默认目标路径
@@ -135,7 +133,7 @@ fn default_dst_path(src: &Path) -> PathBuf {
 }
 
 /// 扩展名处理逻辑（统一处理相对/绝对路径）, 调用后直接修改传入的dst
-fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
+fn process_extension(src: &Path, mut dst: PathBuf, keep_extention: bool) -> PathBuf {
     if keep_extention {
         if let Some(src_ext) = src.extension() {
             // 仅处理文件路径（通过文件名存在判断）
@@ -151,6 +149,7 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
                 #[cfg(not(windows))]
                 let is_dir = dst.is_dir()
                     || (!dst_str.is_empty() && dst_str.ends_with(std::path::MAIN_SEPARATOR));
+
                 if !is_dir && dst_path.extension().is_none() && !src_ext.is_empty() {
                     let new_name = format!(
                         "{}.{}",
@@ -163,6 +162,7 @@ fn process_extension(src: &Path, dst: &mut PathBuf, keep_extention: bool) {
             }
         }
     }
+    dst
 }
 
 /// 路径规范化
