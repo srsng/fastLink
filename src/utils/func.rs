@@ -199,12 +199,12 @@ pub fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
 //     #[test]
 //     fn test_mklink_pre_check() {
 //         let broken = Path::new(r"E:\cache\gs_test\test2\123-rename.md");
-//         let ok_symlink = Path::new(r"E:\cache\gs_test\test2\1.md");
+//         let ok_symlink: &Path = Path::new(r"E:\cache\gs_test\test2\test1-inner\1.md");
 //         let not_exist_path = Path::new(r"E:\cache\gs_test\test2\not-exist-file.md");
 //         let special = Path::new(r"E:\cache\gs_test\test4\1.md");
 
-//         println!("{:?}", mklink_pre_check(special));
-//         println!("{:?}", special.exists());
-//         println!("{:?}", special.try_exists());
+//         // println!("{:?}", mklink_pre_check(special));
+//         // println!("{:?}", special.exists());
+//         // println!("{:?}", special.try_exists());
 //     }
 // }

@@ -43,13 +43,21 @@ Example：
 "#
 )]
 pub struct Args {
-    /// 源文件/源目录路径
+    /// 源文件/源目录路径，表示的是符号链接指向的路径(Point at who)。
     #[arg(required = true, value_parser = validate_src)]
     pub src: String,
 
-    /// 目标路径，可选，区分文件拓展名。
+    /// 目标路径，可选，区分文件拓展名，表示的是要创建在什么位置(Where to create)。
     /// 为空则自动以<SRC>路径名称填充；当<SRC>为文件，[DST]为目录时，自动以<SRC>路径名称填充
     pub dst: Option<String>,
+
+    /// 高优先级参数, 切换为检查模式，添加后不会创建链接: 检查<SRC>属性，包含文件/目录/符号链接，以及符号链接损坏与否
+    #[arg(short, long)]
+    pub check: bool,
+
+    /// 高优先级参数, 切换为删除模式，添加后不会创建链接: 若<SRC>是符号链接，则删除。
+    #[arg(long)]
+    pub rm: bool,
 
     /// 自动保留<SRC>的文件拓展名到[DST]。(不会去除)
     /// 保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。

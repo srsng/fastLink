@@ -10,7 +10,13 @@ pub mod utils;
 use types::args::Args;
 use utils::logs::init_log;
 
-use crate::types::link_task::LinkTask;
+use crate::{
+    types::{
+        err::ErrorCode,
+        link_task::{del_exists_link, LinkTask},
+    },
+    utils::func::mklink_pre_check,
+};
 
 lazy_static::lazy_static! {
     pub static ref WORK_DIR: std::path::PathBuf = std::env::current_dir().expect("Failed to get initial work directory");
@@ -40,17 +46,69 @@ fn main() {
     init_log(args.quiet, args.debug, &args.save_log);
     log::debug!("{:?}", args);
 
-    special_warn(&args);
+    if args.check || args.rm {
+        handle_sub_command(args);
+    } else {
+        special_warn(&args);
 
-    let task_res = LinkTask::try_from(&args);
+        let task_res = LinkTask::try_from(&args);
 
-    match task_res {
-        Ok(mut task) => match task.mklinks() {
-            Ok(()) => (),
+        match task_res {
+            Ok(mut task) => match task.mklinks() {
+                Ok(()) => (),
+                Err(e) => e.log(),
+            },
             Err(e) => e.log(),
-        },
-        Err(e) => e.log(),
+        }
     }
+}
+
+fn handle_sub_command(args: Args) {
+    let check = args.check;
+    let rm = args.rm;
+    let src_path = Path::new(&args.src);
+    if check {
+        handle_check_command(src_path);
+    } else if rm {
+        handle_rm_command(src_path);
+    }
+}
+
+fn handle_check_command(src: &Path) {
+    match mklink_pre_check(src) {
+        Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
+            let filetype = if src.is_dir() {
+                "DIR"
+            } else if src.is_file() {
+                "FILE"
+            } else {
+                "UNKOWN TYPE"
+            };
+            log::info!("{} 是 {}", src.display(), filetype);
+        }
+        Err(e) if e.code == ErrorCode::BrokenSymlink => {
+            log::warn!("{} 是损坏的符号链接(Broken Symlink)", src.display())
+        }
+        Err(e) if e.code == ErrorCode::FileNotExist => {
+            log::warn!("{} 不存在", src.display())
+        }
+        Err(e) if e.code == ErrorCode::TargetLinkExists => {
+            let target = std::fs::read_link(src);
+            match target {
+                Ok(dst) => log::warn!("{} 是符号链接，指向 {}", src.display(), dst.display()),
+                Err(e) => log::warn!("{} 是符号链接，指向未知，获取时出错：{}", src.display(), e),
+            };
+        }
+        _ => log::warn!("未知错误"),
+    }
+}
+
+fn handle_rm_command(src: &Path) {
+    let del_link = true;
+    match del_exists_link(src, del_link) {
+        Ok(_) => (),
+        Err(e) => e.log(),
+    };
 }
 
 /// 对一些特殊情况进行警告

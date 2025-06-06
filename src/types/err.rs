@@ -19,6 +19,7 @@ pub enum ErrorCode {
 
     DuplicateTarget = 201,
     BrokenSymlink = 202,
+    SrcEqDst = 203,
 }
 
 impl fmt::Display for ErrorCode {
@@ -40,6 +41,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::TargetExistsAndNotLink => write!(f, "Target Exists And is Not a Link"),
             ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
             ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),
+            ErrorCode::SrcEqDst => write!(f, "<SRC> is Equal to [DST]"),
         }
     }
 }

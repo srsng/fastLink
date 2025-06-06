@@ -26,103 +26,104 @@ impl LinkTask {
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         self.apply_re(None)?;
         match &self.args.re_pattern {
-            Some(_) => {
-                if self
-                    .matched_paths
-                    .as_ref()
-                    .is_none_or(|paths| paths.is_empty())
-                {
-                    log::warn!("当前Re匹配后的路径为空");
-                    return Ok(());
-                }
-
-                if let Some(paths) = self.matched_paths.as_ref() {
-                    // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
-                    // 返回Ok(false)则取消创建
-                    if !crate::utils::func::display_paginated_paths(
-                        paths,
-                        10,
-                        self.args.re_no_check,
-                    )? {
-                        return Ok(());
-                    }
-
-                    // 批量创建所有需要的目录
-                    let mut create_dir_cnt: usize = 0;
-                    if self.args.make_dir {
-                        if let Some(dirs) = self.dirs_to_create.as_ref() {
-                            for dir in dirs {
-                                if !dir.exists() {
-                                    if create_dir_cnt == 0 {
-                                        log::info!("创建符号链接需要目录中");
-                                    }
-                                    mkdirs(dir)?;
-                                    create_dir_cnt += 1;
-                                    log::info!("已创建目录: {}", dir.display());
-                                }
-                            }
-                        }
-                    }
-                    if create_dir_cnt == 0 {
-                        log::info!("没有需要创建的目录");
-                    } else {
-                        log::info!("目录创建完成, 共创建{}条目录", create_dir_cnt);
-                    }
-
-                    log::info!("开始创建符号链接");
-                    for (i, (src, dst)) in paths.iter().enumerate() {
-                        let src = &self.src_path.join(src);
-                        let dst = &self.dst_path.join(dst);
-
-                        log::debug!(
-                            "Try mklink [{}]: \n\tsrc={} \n\tdst={}",
-                            i,
-                            src.display(),
-                            dst.display()
-                        );
-                        mklink(
-                            src,
-                            dst,
-                            Some(self.args.overwrite_links),
-                            Some(self.args.overwrite_broken_link),
-                            Some(self.args.skip_exist_links),
-                            Some(self.args.skip_broken_src_links),
-                        )?;
-                    }
-                    log::info!("符号链接创建完成！");
-
-                    Ok(())
-                } else {
-                    Err(MyError::new(
-                        ErrorCode::Unknown,
-                        "Unknown Error: 初始化后的路径对列表为None".into(),
-                    ))
-                }
-            }
-            None => {
-                if self.args.only_dir && self.src_path.is_file() {
-                    log::warn!("only_dir: {} is FILE", &self.src_path.display())
-                } else if self.args.only_file && self.src_path.is_dir() {
-                    log::warn!("only_file: {} is DIR", &self.src_path.display())
-                } else {
-                    log::info!(
-                        "符号链接创建中\n\tsrc: {}\n\tdst: {}",
-                        &self.src_path.display(),
-                        &self.dst_path.display()
-                    );
-                    mklink(
-                        &self.src_path,
-                        &self.dst_path,
-                        Some(self.args.overwrite_links),
-                        Some(self.args.overwrite_broken_link),
-                        Some(self.args.skip_exist_links),
-                        Some(self.args.skip_broken_src_links),
-                    )?;
-                    log::info!("符号链接创建成功");
-                }
-                Ok(())
-            }
+            Some(_) => self._mklinks_re(),
+            None => self._mklink(),
         }
+    }
+
+    fn _mklinks_re(&self) -> Result<(), MyError> {
+        if self
+            .matched_paths
+            .as_ref()
+            .is_none_or(|paths| paths.is_empty())
+        {
+            log::warn!("当前Re匹配后的路径为空");
+            return Ok(());
+        }
+
+        if let Some(paths) = self.matched_paths.as_ref() {
+            // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
+            // 返回Ok(false)则取消创建
+            if !crate::utils::func::display_paginated_paths(paths, 10, self.args.re_no_check)? {
+                return Ok(());
+            }
+
+            // 批量创建所有需要的目录
+            let mut create_dir_cnt: usize = 0;
+            if self.args.make_dir {
+                if let Some(dirs) = self.dirs_to_create.as_ref() {
+                    for dir in dirs {
+                        if dir.exists() {
+                            continue;
+                        }
+                        if create_dir_cnt == 0 {
+                            log::info!("创建符号链接需要目录中");
+                        }
+                        mkdirs(dir)?;
+                        create_dir_cnt += 1;
+                        log::info!("已创建目录: {}", dir.display());
+                    }
+                }
+            }
+            if create_dir_cnt == 0 {
+                log::info!("没有需要创建的目录");
+            } else {
+                log::info!("目录创建完成, 共创建{}条目录", create_dir_cnt);
+            }
+
+            log::info!("开始创建符号链接");
+            for (i, (src, dst)) in paths.iter().enumerate() {
+                let src = &self.src_path.join(src);
+                let dst = &self.dst_path.join(dst);
+
+                log::debug!(
+                    "Try mklink [{}]: \n\tsrc={} \n\tdst={}",
+                    i,
+                    src.display(),
+                    dst.display()
+                );
+                mklink(
+                    src,
+                    dst,
+                    Some(self.args.overwrite_links),
+                    Some(self.args.overwrite_broken_link),
+                    Some(self.args.skip_exist_links),
+                    Some(self.args.skip_broken_src_links),
+                )?;
+            }
+            log::info!("符号链接创建完成！");
+
+            Ok(())
+        } else {
+            Err(MyError::new(
+                ErrorCode::Unknown,
+                "Unknown Error: 初始化后的路径对列表为None".into(),
+            ))
+        }
+    }
+
+    fn _mklink(&self) -> Result<(), MyError> {
+        if self.args.only_dir && self.src_path.is_file() {
+            log::warn!("only_dir: {} is FILE", &self.src_path.display())
+        } else if self.args.only_file && self.src_path.is_dir() {
+            log::warn!("only_file: {} is DIR", &self.src_path.display())
+        } else {
+            log::info!(
+                "符号链接创建中\n\tsrc: {}\n\tdst: {}",
+                &self.src_path.display(),
+                &self.dst_path.display()
+            );
+            mklink(
+                &self.src_path,
+                &self.dst_path,
+                Some(self.args.overwrite_links),
+                Some(self.args.overwrite_broken_link),
+                Some(self.args.skip_exist_links),
+                Some(self.args.skip_broken_src_links),
+            )?;
+            log::info!("符号链接创建成功");
+        }
+        Ok(())
     }
 
     /// 包装apply_re相关逻辑，通过_apply_re完成应用re检查，修改matched_paths, dirs_to_create
@@ -414,8 +415,19 @@ fn handle_mklink_pre_check_error_for_dst(
 }
 
 /// 删除符号链接，需要传入overwrite_links参数，避免误用
-fn del_exists_link(dst: &Path, overwrite_links: bool) -> Result<(), MyError> {
+pub fn del_exists_link(dst: &Path, overwrite_links: bool) -> Result<(), MyError> {
     if overwrite_links {
+        // 检查是否是symlink
+        match mklink_pre_check(dst) {
+            Err(e) if e.code == ErrorCode::TargetLinkExists => (),
+            Err(e) if e.code == ErrorCode::BrokenSymlink => (),
+            Err(e) if e.code == ErrorCode::FileNotExist => (),
+            Err(mut e) => {
+                e.msg = format!("尝试删除非符号链接路径 {}", e.msg);
+                return Err(e);
+            }
+            e => return e,
+        };
         fs::remove_file(dst).map_err(|e| {
             MyError::new(
                 ErrorCode::FailToDelLink,
