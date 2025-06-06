@@ -5,7 +5,7 @@ A tool to make symlink fastly and smartly, support regex
 For Windows (at present)
 
 如果你处于Windows的开发者模式，则不需要`sudo`或者`管理员权限`  
-Do not need `sudo` or `administrator` if you are in the Developer Mode.  
+Do not need `sudo` or `administrator` if Developer Mode enabled.  
 
 ![example](image/README/example.png)
 
