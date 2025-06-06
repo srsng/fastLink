@@ -31,11 +31,12 @@ pub fn mk_parents(path: &Path) -> Result<(), MyError> {
 }
 
 /// 创建symlink的前置检查，包含path：
-/// 1. 是否存在于文件系统
-/// 2. 是否是损坏的符号链接
-/// 3. 是否是存在但不是符号链接
-/// 4. 是否已存在的符号链接
+/// 1. 是否存在于文件系统(FileNotExist)
+/// 2. 是否是损坏的符号链接(BrokenSymlink)
+/// 3. 是否是存在但不是符号链接(TargetExistsAndNotLink)
+/// 4. 是否已存在的符号链接(TargetLinkExists)
 ///
+/// 不满足则会返回对应的ErrorCode
 /// （没有返回Ok的条件，但在后续处理FileNotExists就是Ok）
 pub fn mklink_pre_check(path: &Path) -> Result<(), MyError> {
     // 读取元数据

@@ -75,8 +75,8 @@ impl LinkTaskPre {
             ))
         } else {
             let src_path = src_abs_res.unwrap();
-            let res = mklink_pre_check(&src_path);
-            handle_mklink_pre_check_error_for_src(res)?;
+            // let res = mklink_pre_check(&src_path);
+            // handle_mklink_pre_check_error_for_src(res)?;
             self.src_path = Some(src_path);
             Ok(())
         }

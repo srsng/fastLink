@@ -661,7 +661,7 @@ fn mklink(
         e => e,
     }?;
 
-    // 检查目标路径
+    // 检查dst
     let res = mklink_pre_check(dst);
     match handle_mklink_pre_check_error_for_dst(
         res,
@@ -674,7 +674,8 @@ fn mklink(
         Err(e) if e.code == ErrorCode::SkipExistingLink => return Ok(false),
         e => e,
     }?;
-    // 接下来能够保证dst不存在（且不是已有的其他文件、不是损坏的符号链接）
+    // 接下来能够保证dst不存在（且不是已有的其他文件、不是损坏的符号链接），
+    // src是有效路径(且不是损坏符号链接)
 
     let mklink_res = create_symlink(src, dst);
     match mklink_res {
