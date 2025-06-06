@@ -45,22 +45,7 @@ impl LinkTaskPre {
         self.src_path = Some(check_src(&self.args)?);
         // 获取dst_path
         self.dst_path = Some(check_dst(&self.args)?);
-        // 检查两者是否相同
-        self.check_eq()
-    }
-    fn check_eq(&self) -> MyResult<()> {
-        if self.src_path == self.dst_path {
-            Err(MyError::new(
-                ErrorCode::SrcEqDst,
-                format!(
-                    "{}=={}",
-                    self.src_path.as_ref().unwrap().display(),
-                    self.dst_path.as_ref().unwrap().display()
-                ),
-            ))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
 
