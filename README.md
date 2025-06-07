@@ -7,6 +7,9 @@ For Windows (at present)
 如果你处于Windows的开发者模式，则不需要`sudo`或者`管理员权限`  
 Do not need `sudo` or `administrator` if Developer Mode enabled.  
 
+slim版不支持re、输出日志到文件等功能   
+slim-version does not support Regex or save log to file or some other features.
+
 ![example](image/README/example.png)
 
 ## Usage (not up to date yet)
@@ -130,7 +133,7 @@ Options:
 ## 未来计划
 - [ ] 支持 Unix | support Unix  
 - [ ] 完善测试  
-- [ ] release轻量版二进制程序（不支持re等特性）  
+- [x] release轻量版二进制程序（不支持re等特性）  
 
 ## Feedback
 If something not excepet happened, open an issue and paste the log wiht `--debug` argument  

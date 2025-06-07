@@ -1,6 +1,6 @@
 [package]
 name = "fastLink"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
 license = "Apache-2.0"
 
@@ -12,9 +12,9 @@ env_logger = { version = "0.11.8" }
 lazy_static = "1.5.0"
 log = "0.4.27"
 path-clean = "1.0.1"
-regex = "1.11.1"
-strip-ansi-escapes = "0.2.1"
-walkdir = "2.5.0"
+regex = { version="1.11.1", optional = true }
+strip-ansi-escapes = { version = "0.2.1", optional = true }
+walkdir = { version = "2.5.0", optional = true }
 
 [dev-dependencies]
 tempfile = "3.20.0"
@@ -24,3 +24,25 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = true
+
+[[bin]]
+name = "fastlink"
+path = "src/main.rs"
+required-features = ["full"]
+
+[[bin]]
+name = "fastlink-slim"
+path = "src/main.rs"
+required-features = ["slim"]
+
+[features]
+default = ["slim"]
+
+# 正则表达式支持
+regex = ["dep:regex", "walkdir"]
+save_log = ["strip-ansi-escapes"]
+
+# 完整版，包含所有功能
+full = ["regex", "save_log"]
+# slim版
+slim = []

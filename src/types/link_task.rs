@@ -1,15 +1,12 @@
-use crate::types::args::{get_re_max_depth, Args};
+use crate::types::args::Args;
 use crate::types::err::{ErrorCode, MyError, MyResult};
 use crate::types::link_task_args::LinkTaskArgs;
 use crate::types::link_task_pre::{handle_mklink_pre_check_error_for_src, LinkTaskPre};
-use crate::utils::func::{mkdirs, mklink_pre_check};
-
+use crate::utils::func::mklink_pre_check;
 use std::convert::TryFrom;
-use std::ffi::OsStr;
 use std::fs;
 use std::os::windows::fs::{symlink_dir, symlink_file};
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 /// 只创建链接以及创建时的相关处理
 /// 可通过try_new或try_from构建
@@ -23,6 +20,12 @@ pub struct LinkTask {
 }
 
 impl LinkTask {
+    #[cfg(not(feature = "regex"))]
+    pub fn mklinks(&mut self) -> Result<(), MyError> {
+        self._mklink()
+    }
+
+    #[cfg(feature = "regex")]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         self.apply_re(None)?;
         match &self.args.re_pattern {
@@ -31,6 +34,7 @@ impl LinkTask {
         }
     }
 
+    #[cfg(feature = "regex")]
     fn _mklinks_re(&self) -> Result<(), MyError> {
         if self
             .matched_paths
@@ -59,7 +63,7 @@ impl LinkTask {
                         if create_dir_cnt == 0 {
                             log::info!("创建符号链接需要目录中");
                         }
-                        mkdirs(dir)?;
+                        crate::utils::func::mkdirs(dir)?;
                         create_dir_cnt += 1;
                         log::info!("已创建目录: {}", dir.display());
                     }
@@ -126,6 +130,7 @@ impl LinkTask {
         Ok(())
     }
 
+    #[cfg(feature = "regex")]
     /// 包装apply_re相关逻辑，通过_apply_re完成应用re检查，修改matched_paths, dirs_to_create
     pub fn apply_re(&mut self, force: Option<bool>) -> Result<(), MyError> {
         // todo 优化regex Option检查
@@ -135,6 +140,7 @@ impl LinkTask {
         Ok(())
     }
 
+    #[cfg(feature = "regex")]
     /// 应用re检查
     /// 使用了参数only_file， only_dir， re_output_flatten
     fn _apply_re(&mut self) -> Result<(), MyError> {
@@ -155,8 +161,11 @@ impl LinkTask {
 
         // 构建路径遍历器，re_max_depth、re_follow_links相关参数于此使用
         // 直接兼容src_path是单文件或目录
-        let walker = WalkDir::new(&self.src_path)
-            .max_depth(get_re_max_depth(self.args.make_dir, self.args.re_max_depth))
+        let walker = walkdir::WalkDir::new(&self.src_path)
+            .max_depth(crate::types::args::get_re_max_depth(
+                self.args.make_dir,
+                self.args.re_max_depth,
+            ))
             .follow_links(self.args.re_follow_links);
         for entry in walker.into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
@@ -176,7 +185,7 @@ impl LinkTask {
                         // 展平模式：仅使用文件名
                         PathBuf::from(path.file_name().unwrap_or_else(|| {
                             log::warn!("无法解析文件名称，使用 unnamed-fastlink");
-                            OsStr::new("unnamed-fastlink")
+                            std::ffi::OsStr::new("unnamed-fastlink")
                         }))
                     } else {
                         // 镜像模式：保留相对路径
@@ -338,7 +347,11 @@ fn mklink(
     let mklink_res = create_symlink(src, dst);
     match mklink_res {
         Ok(_) => {
-            log::info!("创建符号链接: {} -> {}", src.display(), dst.display());
+            log::info!(
+                "创建符号链接: 在 '{}' 指向 '{}'",
+                dst.display(),
+                src.display()
+            );
             Ok(true)
         }
         res => handle_create_symlink_error(res, src, dst).map(|_| true),

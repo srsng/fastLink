@@ -55,8 +55,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         
-      - name: Build Release Binary
-        run: cargo build --release --verbose
+      - name: Build Release Binary Full-features
+        run: cargo build --release --features=full --bin fastlink --verbose
+
+      - name: Build Release Binary Slim-features
+        run: cargo build --release --features=slim --bin fastlink-slim --verbose
   
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2

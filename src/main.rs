@@ -22,28 +22,15 @@ lazy_static::lazy_static! {
     pub static ref WORK_DIR: std::path::PathBuf = std::env::current_dir().expect("Failed to get initial work directory");
 }
 
-// use crate::types::link_task_pre::LinkTaskPre;
-// const PATHEXT: &str = ".EXE;.COM;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
-
-// /// 获取系统可执行扩展名列表
-// fn get_executable_extensions() -> Vec<String> {
-//     let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| PATHEXT.to_string());
-
-//     pathext
-//         .split(';')
-//         .map(|s| s.trim().to_lowercase())
-//         .filter(|s| !s.is_empty())
-//         .collect()
-// }
-
-// // windows隐藏命令行窗口参数
-// const CREATE_NO_WINDOW: u32 = 0x08000000;
-
 fn main() {
     let args: Args = Args::parse();
 
     // 初始化日志系统
+
+    #[cfg(feature = "save_log")]
     init_log(args.quiet, args.debug, &args.save_log);
+    #[cfg(not(feature = "save_log"))]
+    init_log(args.quiet, args.debug);
     log::debug!("{:?}", args);
 
     if args.check || args.rm {
@@ -78,7 +65,7 @@ fn handle_sub_command(args: Args) {
 }
 
 fn handle_check_command(src: &Path) {
-    log::info!("[check模式(--check)]");
+    log::info!("[check模式 (--check)]");
     match mklink_pre_check(src) {
         Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
             let filetype = if src.is_dir() {
@@ -108,7 +95,7 @@ fn handle_check_command(src: &Path) {
 }
 
 fn handle_rm_command(src: &Path) {
-    log::info!("[rm模式(--rm)]");
+    log::info!("[rm模式 (--rm)]");
     let del_link = true;
     match del_exists_link(src, del_link) {
         Ok(_) => (),
