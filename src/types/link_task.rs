@@ -428,19 +428,57 @@ pub fn del_exists_link(dst: &Path, overwrite_links: bool) -> Result<(), MyError>
             }
             e => return e,
         };
-        fs::remove_file(dst).map_err(|e| {
-            MyError::new(
-                ErrorCode::FailToDelLink,
-                format!("{}: {}", dst.display(), e),
-            )
-        })?;
-        log::info!("已删除符号链接 {}", dst.display());
-        Ok(())
+        // 区分符号链接类型
+        if dst.is_dir() {
+            fs::remove_dir(dst).map_err(|e| {
+                MyError::new(
+                    ErrorCode::FailToDelLink,
+                    format!("(DIR) {}: {}", dst.display(), e),
+                )
+            })?;
+            log::info!("已删除符号链接 {}", dst.display());
+            Ok(())
+        } else if dst.is_file() {
+            fs::remove_file(dst).map_err(|e| {
+                MyError::new(
+                    ErrorCode::FailToDelLink,
+                    format!("(FILE){}: {}", dst.display(), e),
+                )
+            })?;
+            log::info!("已删除符号链接 {}", dst.display());
+            Ok(())
+        } else {
+            log::warn!("损坏的符号链接 {}, 尝试作为文件删除", dst.display());
+            let res_file = fs::remove_file(dst);
+            if res_file.is_err() {
+                log::warn!("删除失败: {}，尝试作为目录删除", dst.display());
+                let res_dir = fs::remove_dir(dst).map_err(|_| {
+                    MyError::new(
+                        ErrorCode::FailToDelLink,
+                        format!(
+                            "(Unkown){}: 未知类型的符号链接，无法删除，请尝试手动删除",
+                            dst.display()
+                        ),
+                    )
+                });
+                if res_dir.is_err() {
+                    log::warn!("作为目录删除失败: {}", dst.display());
+                    res_dir
+                } else {
+                    log::info!("已删除符号链接 {}", dst.display());
+                    Ok(())
+                }
+            } else {
+                log::info!("已删除符号链接 {}", dst.display());
+                Ok(())
+            }
+        }
     } else {
         Ok(())
     }
 }
 
+/// 处理/转换create_symlink返回的错误
 fn handle_create_symlink_error(
     res: Result<(), MyError>,
     _src: &Path,
@@ -472,7 +510,7 @@ fn handle_create_symlink_error(
             log::error!("删除链接失败：{}", dst.display());
             Ok(())
         }
-        // 其他错误: FailToGetPathParent, FailToGetFileMetadata, FailAtMakeLink, Unknown
+        // 其他错误, 直接返回由main输出: PermissionDenied, FailToGetPathParent, FailToGetFileMetadata, FailAtMakeLink, Unknown
         Err(e) => Err(e),
     }
 }
@@ -486,7 +524,6 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
     // check_overwrite(dst, overwrite_links, skip_exist_links)?;
 
     // 获取源文件元数据
-    // let metadata = fs::metadata(src);
     let metadata = fs::metadata(src).map_err(|e| {
         MyError::new(
             ErrorCode::FailToGetFileMetadata,
@@ -496,36 +533,49 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
 
     // 根据类型选择创建方式
     if metadata.is_file() {
-        symlink_file(src, dst).map_err(|e| {
-            MyError::new(
-                ErrorCode::FailAtMakeLink,
-                format!(
-                    "无法创建文件符号链接 {} -> {}: {}",
-                    src.display(),
-                    dst.display(),
-                    e,
-                ),
-            )
-        })?;
-        Ok(())
+        let res = symlink_file(src, dst);
+        convert_create_symlink_res(res, src, dst)
     } else if metadata.is_dir() {
-        symlink_dir(src, dst).map_err(|e| {
-            MyError::new(
-                ErrorCode::FailAtMakeLink,
-                format!(
-                    "无法创建目录符号链接 {} -> {}: {}",
-                    src.display(),
-                    dst.display(),
-                    e
-                ),
-            )
-        })?;
-        Ok(())
+        let res = symlink_dir(src, dst);
+        convert_create_symlink_res(res, src, dst)
     } else {
         Err(MyError::new(
             ErrorCode::Unknown,
-            "奇怪的错误: <SRC>既不是文件也不是目录".into(),
+            "奇怪的错误: <SRC>既不是文件也不是目录，可能是损坏的符号链接或别的什么".into(),
         ))
+    }
+}
+
+/// 转换create_symlink中创建符号链接的res
+pub fn convert_create_symlink_res(
+    res: Result<(), std::io::Error>,
+    src: &Path,
+    dst: &Path,
+) -> MyResult<()> {
+    if let Err(e) = res {
+        match e.kind() {
+            #[cfg(windows)]
+            std::io::ErrorKind::PermissionDenied => Err(MyError::new(
+                ErrorCode::PermissionDenied,
+                "权限不足，请尝试使用管理员权限，或开启开发者模式".into(),
+            )),
+            #[cfg(not(windows))]
+            std::io::ErrorKind::PermissionDenied => Err(MyError::new(
+                ErrorCode::PermissionDenied,
+                "权限不足，请尝试sudo".into(),
+            )),
+            _ => Err(MyError::new(
+                ErrorCode::FailAtMakeLink,
+                format!(
+                    "无法创建目录符号链接 '{}' -> '{}': {}",
+                    dst.display(),
+                    src.display(),
+                    e
+                ),
+            )),
+        }
+    } else {
+        Ok(())
     }
 }
 
@@ -533,22 +583,9 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
 pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<(), MyError> {
     let src = src.as_ref();
     let dst = dst.as_ref();
-
     // check_overwrite(dst, overwrite_links, skip_exist_links)?;
-
-    std::os::unix::fs::symlink(src, dst).map_err(|e| {
-        MyError::new(
-            ErrorCode::FailAtMakeLink,
-            format!(
-                "无法创建符号链接 {} -> {}: {}",
-                src.display(),
-                dst.display(),
-                e
-            ),
-        )
-    })?;
-
-    Ok(())
+    let res = std::os::unix::fs::symlink(src, dst);
+    convert_create_symlink_res(res, src, dst)
 }
 
 // #[cfg(test)]

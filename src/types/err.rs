@@ -7,6 +7,7 @@ pub enum ErrorCode {
     FileNotExist = 4,
     InvalidInput = 2,
     IoError = 3,
+    PermissionDenied = 5,
     FailToMakeDir = 100,
     FailAtMakeLink = 101,
     FailToGetPathParent = 102,
@@ -42,6 +43,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
             ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),
             ErrorCode::SrcEqDst => write!(f, "<SRC> is Equal to [DST]"),
+            ErrorCode::PermissionDenied => write!(f, "PermissionDenied"),
         }
     }
 }
