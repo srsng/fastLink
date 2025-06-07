@@ -1,9 +1,4 @@
-use std::path::Path;
-
-use crate::{
-    types::err::{ErrorCode, MyError},
-    utils::func::mklink_pre_check,
-};
+use crate::types::err::{ErrorCode, MyError};
 use clap::Parser;
 use path_clean::PathClean;
 use regex::Regex;
@@ -154,7 +149,6 @@ pub struct Args {
 }
 
 /// 检查src
-/// 不存在，或是损坏的符号链接都将返回Err
 fn validate_src(s: &str) -> Result<String, String> {
     let path = std::path::Path::new(s).clean();
 
@@ -163,19 +157,7 @@ fn validate_src(s: &str) -> Result<String, String> {
     } else if path.components().count() == 0 {
         Err(MyError::new(ErrorCode::InvalidInput, "无效的路径格式".into()).into())
     } else {
-        // 验证存在、或是有效的符号链接
-        let src = Path::new(s);
-        let res = mklink_pre_check(src);
-        match res {
-            Ok(_) => Ok(s.into()),
-            Err(e) if e.code == ErrorCode::TargetLinkExists => Ok(s.into()),
-            Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => Ok(s.into()),
-            Err(e) if e.code == ErrorCode::FileNotExist => Err("\n路径src不存在".into()),
-            Err(e) if e.code == ErrorCode::BrokenSymlink => {
-                Err("\n损坏的符号链接不可以作为src".into())
-            }
-            Err(e) => Err(e.into()),
-        }
+        Ok(s.into())
     }
 }
 

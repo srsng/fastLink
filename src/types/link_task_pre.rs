@@ -50,15 +50,30 @@ impl LinkTaskPre {
 }
 
 /// 解析、规范、验证src,
-/// 并将结果存于src_path
+/// 不存在，或是损坏的符号链接都将返回Err
 pub fn check_src(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
-    let src_abs_res = dunce::canonicalize(&task_args.src);
+    let s = &task_args.src;
+    // 验证存在、或是有效的符号链接
+    let src = Path::new(s);
+    let res = crate::utils::func::mklink_pre_check(src);
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) if e.code == ErrorCode::TargetLinkExists => Ok(()),
+        Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => Ok(()),
+        Err(e) if e.code == ErrorCode::FileNotExist => Err(e),
+        Err(mut e) if e.code == ErrorCode::BrokenSymlink => {
+            e.msg = format!("\n损坏的符号链接不可以作为src: {}", e.msg);
+            Err(e)
+        }
+        Err(e) => Err(e),
+    }?;
+    let src_abs_res = dunce::canonicalize(s);
     if let Err(e) = src_abs_res {
         Err(MyError::new(
             ErrorCode::InvalidInput,
             format!(
                 "请检查<SRC>'{}'是否存在 (或是否为损坏的符号链接). Fail to canonicalize <SRC>: {}",
-                &task_args.src, e
+                s, e
             ),
         ))
     } else {
