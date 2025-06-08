@@ -11,35 +11,6 @@ use std::{
 #[cfg(feature = "regex")]
 const MAIN_SEPARATOR: char = std::path::MAIN_SEPARATOR;
 
-/// 创建目录
-pub fn mkdirs<P: AsRef<Path>>(path: P) -> Result<(), MyError> {
-    let res = std::fs::create_dir_all(path);
-    match res {
-        Err(e) => Err(MyError::new(ErrorCode::FailToMakeDir, format!("{}", e))),
-        _ => Ok(()),
-    }
-}
-/// 创建传入路径的父目录
-pub fn mk_parents(path: &Path) -> Result<(), MyError> {
-    let parent = path.parent();
-    if parent.is_none() {
-        return Err(MyError::new(
-            ErrorCode::FailToGetPathParent,
-            format!("{}", &path.display()),
-        ));
-    }
-    let parent = parent.unwrap();
-    if !parent.exists() {
-        let res = std::fs::create_dir_all(parent);
-        match res {
-            Err(e) => Err(MyError::new(ErrorCode::FailToMakeDir, format!("{}", e))),
-            _ => Ok(()),
-        }
-    } else {
-        Ok(())
-    }
-}
-
 /// 创建symlink的前置检查，包含path：
 /// 1. 是否存在于文件系统(FileNotExist)
 /// 2. 是否是损坏的符号链接(BrokenSymlink)

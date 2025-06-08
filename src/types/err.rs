@@ -8,6 +8,7 @@ pub enum ErrorCode {
     InvalidInput = 2,
     IoError = 3,
     PermissionDenied = 5,
+    DirectoryNotEmpty = 6,
     FailToMakeDir = 100,
     FailAtMakeLink = 101,
     FailToGetPathParent = 102,
@@ -44,6 +45,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),
             ErrorCode::SrcEqDst => write!(f, "<SRC> is Equal to [DST]"),
             ErrorCode::PermissionDenied => write!(f, "PermissionDenied"),
+            ErrorCode::DirectoryNotEmpty => write!(f, "DirectoryNotEmpty"),
         }
     }
 }

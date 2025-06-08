@@ -5,22 +5,15 @@
 
 use clap::Parser;
 use std::path::Path;
-pub mod types;
-pub mod utils;
-use types::args::Args;
-use utils::logs::init_log;
 
-use crate::{
-    types::{
-        err::ErrorCode,
-        link_task::{del_exists_link, LinkTask},
-    },
+use fastlink::types::args::Args;
+use fastlink::utils::logs::init_log;
+
+use fastlink::utils::link::del_exists_link;
+use fastlink::{
+    types::{err::ErrorCode, link_task::LinkTask},
     utils::func::mklink_pre_check,
 };
-
-lazy_static::lazy_static! {
-    pub static ref WORK_DIR: std::path::PathBuf = std::env::current_dir().expect("Failed to get initial work directory");
-}
 
 fn main() {
     let args: Args = Args::parse();
@@ -67,6 +60,7 @@ fn handle_sub_command(args: Args) {
 fn handle_check_command(src: &Path) {
     log::info!("[check模式 (--check)]");
     match mklink_pre_check(src) {
+        Ok(_) => (),
         Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
             let filetype = if src.is_dir() {
                 "DIR"
@@ -90,14 +84,14 @@ fn handle_check_command(src: &Path) {
                 Err(e) => log::error!("{} 是符号链接，指向未知，获取时出错：{}", src.display(), e),
             };
         }
-        _ => log::warn!("未知错误"),
+        Err(e) => log::warn!("未知错误: {}", e),
     }
 }
 
 fn handle_rm_command(src: &Path) {
     log::info!("[rm模式 (--rm)]");
     let del_link = true;
-    match del_exists_link(src, del_link) {
+    match del_exists_link(src, del_link, None) {
         Ok(_) => (),
         Err(e) => e.log(),
     };

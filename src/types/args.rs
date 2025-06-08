@@ -51,8 +51,7 @@ use crate::types::args_example_text::EXAMPLE;
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about = "A tool to make symlink fastly and smartly
-一个智能且方便的符号链接创建工具",
+    about = "A tool to make symlink fastly and smartly\n一个智能且方便的符号链接创建工具",
     long_about = EXAMPLE
 )]
 pub struct Args {
@@ -170,6 +169,10 @@ pub struct Args {
     /// 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log
     #[arg(long)]
     pub save_log: Option<String>,
+
+    /// 允许使用损坏的符号链接作为src
+    #[arg(long)]
+    pub allow_broken_src: bool,
 }
 
 /// 检查src

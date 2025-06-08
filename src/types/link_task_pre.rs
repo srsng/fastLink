@@ -1,7 +1,6 @@
 use crate::types::args::Args;
 use crate::types::err::{ErrorCode, MyError, MyResult};
 use crate::types::link_task_args::LinkTaskArgs;
-use crate::utils::func::mkdirs;
 use path_clean::PathClean;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -101,9 +100,9 @@ pub fn parse_args_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
             let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
             // 规范化
             if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
-                canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
+                crate::utils::path::canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
             } else {
-                canonicalize_path(&PathBuf::from(d))?
+                crate::utils::path::canonicalize_path(&PathBuf::from(d))?
             }
         }
         // 没有传入DST: 使用SRC文件名
@@ -180,30 +179,13 @@ fn process_extension(src: &Path, mut dst: PathBuf, keep_extention: bool) -> Path
     dst
 }
 
-/// 路径规范化
-fn canonicalize_path(path: &Path) -> Result<PathBuf, MyError> {
-    if path.is_absolute() {
-        Ok(path.to_path_buf().clean())
-    } else {
-        // let curdir = std::env::current_dir();
-        // match curdir {
-        //     Ok(curdir) => Ok(curdir.join(path.clean())),
-        //     Err(e) => Err(MyError::new(
-        //         ErrorCode::Unknown,
-        //         format!("Failed to get current directory: {}", e),
-        //     )),
-        // }
-        Ok(crate::WORK_DIR.join(path.clean()))
-    }
-}
-
 /// validate_dst函数辅助函数
 /// 参数--md不为true时，若其本身是目录且不存在，则报错
 fn handle_validate_dst_dir_not_exists(dst: PathBuf, make_dir: bool) -> Result<PathBuf, MyError> {
     if dst.is_dir() && !dst.exists() {
         if make_dir {
             // 创建目录
-            mkdirs(&dst)?;
+            crate::utils::fs::mkdirs(&dst)?;
             Ok(dst)
         } else {
             Err(MyError::new(
@@ -244,7 +226,7 @@ fn handle_validate_dst_parent_not_exist(
 
 /// 为validate_dst函数（handle_validate_dst_parent_not_exist函数）处理创建目录及相关错误
 fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: PathBuf) -> Result<PathBuf, MyError> {
-    match mkdirs(&dst_parent) {
+    match crate::utils::fs::mkdirs(&dst_parent) {
         Ok(_) => {
             log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
             // 重新组合dst路径
