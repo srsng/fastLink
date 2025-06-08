@@ -1,7 +1,7 @@
 use clap::Parser;
 use fastlink::desktop_setter::handler::{
-    init::handle_desktop_init, reset::handle_desktop_reset, set::handle_desktop_set,
-    state::handle_desktop_state, usual::handle_desktop_usual,
+    init::handle_desktop_init, origin::handle_desktop_origin, reset::handle_desktop_reset,
+    set::handle_desktop_set, state::handle_desktop_state, usual::handle_desktop_usual,
 };
 use fastlink::desktop_setter::types::args::Args;
 use fastlink::desktop_setter::types::commands::Commands;
@@ -34,7 +34,7 @@ fn handle_desktop_setter(args: Args) -> MyResult<()> {
             usual,
         } => handle_desktop_set(new_desktop_dir_path, make_dir, usual),
         Commands::State => handle_desktop_state(),
-        Commands::Origin | Commands::O => handle_desktop_init(),
+        Commands::Origin | Commands::O => handle_desktop_origin(),
         Commands::Usual { name } | Commands::U { name } => handle_desktop_usual(name),
     }
 }
