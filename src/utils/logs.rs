@@ -95,7 +95,7 @@ pub fn init_log(quiet: bool, debug: bool, #[cfg(feature = "save_log")] save_log:
     }
 
     builder
-        .format(|buf, record| {
+        .format(move |buf, record| {
             let time = chrono::Local::now().format("%H:%M:%S");
             let level = record.level();
             let level_style = buf.default_level_style(level);
@@ -104,11 +104,22 @@ pub fn init_log(quiet: bool, debug: bool, #[cfg(feature = "save_log")] save_log:
             let time_style = Style::new().fg_color(Some(Color::Rgb(RgbColor(150, 150, 150))));
 
             // 格式化输出
-            writeln!(
-                buf,
-                "{time_style}{time}{time_style:#} {level_style}{level:5}{level_style:#} {}",
-                record.args()
-            )
+            if debug {
+                writeln!(
+                    buf,
+                    "{time_style}{time}{} {} ({}){time_style:#} {level_style}{level}{level_style:#} {}",
+                    record.module_path().unwrap_or("unknown_modul"), // 模块路径
+                    record.file().unwrap_or("unknown_file"),         // 文件名
+                    record.line().unwrap_or(0),                      // 行号
+                    record.args()                                    // 日志内容
+                )
+            } else {
+                writeln!(
+                    buf,
+                    "{time_style}{time}{time_style:#} {level_style}{level}{level_style:#} {}",
+                    record.args() // 日志内容
+                )
+            }
         })
         .filter_level(if quiet {
             log::LevelFilter::Off

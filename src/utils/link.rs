@@ -25,13 +25,6 @@ pub fn mklink(
     let skip_broken_src_links = skip_broken_src_links.unwrap_or(true);
     let allow_broken_src = allow_broken_src.unwrap_or(false);
 
-    // log::info!(
-    //     "符号链接创建中: New-Item -Path '{}' -ItemType SymbolicLink -Target '{}'",
-    //     src.display(),
-    //     dst.display(),
-    // );
-    // （实际当然不是用上面这个命令创建symlink
-
     // 检查src
     let res = mklink_pre_check(src);
     match crate::types::link_task_pre::handle_mklink_pre_check_error_for_src(res) {
@@ -189,7 +182,7 @@ pub fn del_exists_link(
                     format!("(DIR) {}: {}", dst.display(), e),
                 )
             })?;
-            log::info!("已删除符号链接 {}", dst.display());
+            log::debug!("已删除符号链接 {}", dst.display());
             Ok(())
         } else if dst.is_file() {
             fs::remove_file(dst).map_err(|e| {
@@ -198,13 +191,13 @@ pub fn del_exists_link(
                     format!("(FILE){}: {}", dst.display(), e),
                 )
             })?;
-            log::info!("已删除符号链接 {}", dst.display());
+            log::debug!("已删除符号链接 {}", dst.display());
             Ok(())
         } else {
-            log::warn!("损坏的符号链接 {}, 尝试作为文件删除", dst.display());
+            log::debug!("损坏的符号链接 {}, 尝试作为文件删除", dst.display());
             let res_file = fs::remove_file(dst);
             if res_file.is_err() {
-                log::warn!("删除失败: {}，尝试作为目录删除", dst.display());
+                log::debug!("删除失败: {}，尝试作为目录删除", dst.display());
                 let res_dir = fs::remove_dir(dst).map_err(|_| {
                     MyError::new(
                         ErrorCode::FailToDelLink,
@@ -215,14 +208,14 @@ pub fn del_exists_link(
                     )
                 });
                 if res_dir.is_err() {
-                    log::warn!("作为目录删除失败: {}", dst.display());
+                    log::debug!("作为目录删除失败: {}", dst.display());
                     res_dir
                 } else {
-                    log::info!("已删除符号链接 {}", dst.display());
+                    log::debug!("已删除符号链接 {}", dst.display());
                     Ok(())
                 }
             } else {
-                log::info!("已删除符号链接 {}", dst.display());
+                log::debug!("已删除符号链接 {}", dst.display());
                 Ok(())
             }
         }

@@ -1,5 +1,5 @@
 // todo: 使用更舒服的方式创建EXAMPLE
-#[cfg(feature = "slim")]
+#[cfg(feature = "fastlink_slim")]
 pub const EXAMPLE: &str = r#"
 Example：
     // 在当前目录创建一个名为document的符号链接
@@ -18,7 +18,7 @@ Example：
     fastlink data.csv ../
 "#;
 
-#[cfg(not(feature = "slim"))]
+#[cfg(not(feature = "fastlink_slim"))]
 pub const EXAMPLE: &str = r#"
 Example：
     // 在当前目录创建一个名为document的符号链接

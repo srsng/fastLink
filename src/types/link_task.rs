@@ -113,7 +113,7 @@ impl LinkTask {
         } else if self.args.only_file && self.src_path.is_dir() {
             log::warn!("only_file: {} is DIR", &self.src_path.display())
         } else {
-            log::info!(
+            log::debug!(
                 "符号链接创建中\n\tsrc: {}\n\tdst: {}",
                 &self.src_path.display(),
                 &self.dst_path.display()

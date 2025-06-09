@@ -164,7 +164,7 @@ impl fmt::Display for DesktopState {
         )?;
 
         // 处理 usual_paths 字段
-        writeln!(f, "usual_paths:")?;
+        writeln!(f, "\n常用快捷名称-路径(usual_paths):")?;
         if self.usual_paths.is_empty() {
             writeln!(f, "    空，使用set目录携带参数-u添加")?;
         } else {

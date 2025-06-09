@@ -33,28 +33,29 @@ strip = true
 [[bin]]
 name = "fastlink"
 path = "src/bin/fastlink.rs"
-required-features = ["full"]
+required-features = ["fastlink_full"]
 
 [[bin]]
 name = "fastlink-slim"
 path = "src/bin/fastlink.rs"
-required-features = ["slim"]
+required-features = ["fastlink_slim"]
 
 [[bin]]
-name = "desktop-setter"
+name = "desks"
 path = "src/bin/desktop_setter.rs"
 required-features = ["desktop_setter"]
 
 [features]
-default = ["slim"]
+default = ["fastlink_slim"]
+# default = ["desktop_setter"]
 
 # 正则表达式支持
 regex = ["dep:regex", "walkdir"]
 save_log = ["strip-ansi-escapes"]
 
 # 完整版，包含所有功能
-full = ["regex", "save_log"]
+fastlink_full = ["regex", "save_log"]
 # slim版
-slim = []
+fastlink_slim = []
 # 其他bin
-desktop_setter = ["winreg", "regex", "serde", "serde_json", "dirs", "once_cell"]
+desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell"]

@@ -1,5 +1,4 @@
 use crate::types::err::{ErrorCode, MyError, MyResult};
-use regex::Regex;
 use std::env;
 use std::path::Path;
 use std::path::PathBuf;
@@ -51,57 +50,130 @@ fn get_original_desktop_path_string() -> MyResult<String> {
     Ok(desktop_path)
 }
 
-/// 解析路径中的环境变量占位符（如 %USERPROFILE%, $HOME, ${HOME}）
 pub fn parse_env_vars(path: String) -> MyResult<PathBuf> {
-    // 匹配 Windows 风格 (%VAR%) 和 Unix 风格 ($VAR 或 ${VAR})
-    let re = Regex::new(r"%([\w\d_]+)%|\$\{([\w\d_]+)\}|\$([\w\d_]+)").map_err(|e| {
-        MyError::new(
-            ErrorCode::IoError,
-            format!("解析Desktop库位置失败，无法创建正则表达式: {e}"),
-        )
-    })?;
+    let replacements = match_env_placeholders(&path)?;
+    let result = apply_replacements(path, replacements);
+    Ok(result.into())
+}
 
-    let mut result = path.to_string();
+/// 查找字符串中的环境变量占位符，返回占位符及其值的列表
+fn match_env_placeholders(path: &str) -> MyResult<Vec<(String, String)>> {
     let mut replacements = Vec::new();
+    let chars: Vec<char> = path.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
 
-    // 查找所有匹配的环境变量
-    for cap in re.captures_iter(path.as_str()) {
-        // 提取变量名（Windows: cap[1], Unix: cap[2] 或 cap[3]）
-        let var_name = if let Some(name) = cap.get(1).map(|m| m.as_str()) {
-            name
-        } else if let Some(name) = cap.get(2).map(|m| m.as_str()) {
-            name
-        } else if let Some(name) = cap.get(3).map(|m| m.as_str()) {
-            name
-        } else {
-            continue;
-        };
+    while i < len {
+        if i + 1 < len && chars[i] == '%' {
+            if let Some((placeholder, value, next_i)) = try_parse_windows_var(&chars, path, i)? {
+                replacements.push((placeholder, value));
+                i = next_i;
+                continue;
+            }
+        } else if chars[i] == '$' {
+            if let Some((placeholder, value, next_i)) = try_parse_unix_var(&chars, path, i)? {
+                replacements.push((placeholder, value));
+                i = next_i;
+                continue;
+            }
+        }
+        i += 1;
+    }
 
-        // 获取环境变量值
+    Ok(replacements)
+}
+
+/// 尝试解析 Windows 风格的 %VAR% 占位符
+fn try_parse_windows_var(
+    chars: &[char],
+    path: &str,
+    start: usize,
+) -> MyResult<Option<(String, String, usize)>> {
+    let len = chars.len();
+    let mut i = start + 1; // 跳过起始 %
+    let var_start = i;
+
+    while i < len && chars[i] != '%' && (chars[i].is_alphanumeric() || chars[i] == '_') {
+        i += 1;
+    }
+
+    if i < len && chars[i] == '%' && i > var_start {
+        let var_name = &path[var_start..i];
         let var_value = env::var(var_name).map_err(|e| {
             MyError::new(
                 ErrorCode::IoError,
                 format!("解析Desktop库位置失败，环境变量 {var_name} 不存在: {e}"),
             )
         })?;
+        let placeholder = &path[start..=i];
+        Ok(Some((placeholder.to_string(), var_value, i + 1)))
+    } else {
+        Ok(None)
+    }
+}
 
-        // 记录替换信息
-        let match_str = cap.get(0).unwrap().as_str();
-        replacements.push((match_str.to_string(), var_value));
+/// 尝试解析 Unix 风格的 ${VAR} 或 $VAR 占位符
+fn try_parse_unix_var(
+    chars: &[char],
+    path: &str,
+    start: usize,
+) -> MyResult<Option<(String, String, usize)>> {
+    let len = chars.len();
+    let mut i = start + 1; // 跳过 $
+
+    if i < len && chars[i] == '{' {
+        i += 1; // 跳过 {
+        let var_start = i;
+
+        while i < len && chars[i] != '}' && (chars[i].is_alphanumeric() || chars[i] == '_') {
+            i += 1;
+        }
+
+        if i < len && chars[i] == '}' && i > var_start {
+            let var_name = &path[var_start..i];
+            let var_value = env::var(var_name).map_err(|e| {
+                MyError::new(
+                    ErrorCode::IoError,
+                    format!("解析Desktop库位置失败，环境变量 {var_name} 不存在: {e}"),
+                )
+            })?;
+            let placeholder = &path[start..=i];
+            return Ok(Some((placeholder.to_string(), var_value, i + 1)));
+        }
+    } else {
+        let var_start = i;
+
+        while i < len && (chars[i].is_alphanumeric() || chars[i] == '_') {
+            i += 1;
+        }
+
+        if i > var_start {
+            let var_name = &path[var_start..i];
+            let var_value = env::var(var_name).map_err(|e| {
+                MyError::new(
+                    ErrorCode::IoError,
+                    format!("解析Desktop库位置失败，环境变量 {var_name} 不存在: {e}"),
+                )
+            })?;
+            let placeholder = &path[start..i];
+            return Ok(Some((placeholder.to_string(), var_value, i)));
+        }
     }
 
-    // 执行替换
+    Ok(None)
+}
+
+/// 将占位符替换为环境变量值
+fn apply_replacements(mut path: String, replacements: Vec<(String, String)>) -> String {
     for (placeholder, value) in replacements {
-        result = result.replace(&placeholder, &value);
+        path = path.replace(&placeholder, &value);
     }
-
-    Ok(result.into())
+    path
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_get_dir_temp() {
@@ -137,12 +209,5 @@ mod tests {
 
         // 测试不存在的环境变量
         assert!(parse_env_vars("/home/$UNKNOWN_VAR/test".into()).is_err());
-    }
-    #[test]
-    fn test_rename() {
-        let path = Path::new(r"C:\Users\srsnn\Desktop_desktop_setter_temp");
-        let path_new = Path::new(r"C:\Users\srsnn\Desktop");
-        let res = std::fs::rename(path, path_new);
-        println!("{:?}", res)
     }
 }

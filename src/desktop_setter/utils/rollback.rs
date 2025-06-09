@@ -28,11 +28,11 @@ impl Transaction {
     {
         let name = name.unwrap_or_default();
         // 执行操作
-        log::info!("执行操作{}中", name);
+        log::debug!("执行操作{}中", name);
         op().inspect_err(|e| {
             log::warn!("执行操作 {} 失败: {}", name, e);
         })?;
-        log::info!("执行操作{}成功", name);
+        log::debug!("执行操作{}成功", name);
         // 如果成功，记录撤销函数
         self.undo_ops_name.push(name);
         self.undo_ops.push(Box::new(undo));
@@ -53,11 +53,11 @@ impl Transaction {
             self.undo_ops_name.drain(..).rev(),
             self.undo_ops.drain(..).rev(),
         ) {
-            log::info!("回滚操作 {} 中", name);
+            log::debug!("回滚操作 {} 中", name);
             undo().inspect_err(|e| {
                 log::warn!("回滚操作 {} 失败: {}", name, e);
             })?;
-            log::info!("回滚操作 {} 成功", name);
+            log::debug!("回滚操作 {} 成功", name);
         }
         Ok(())
     }
@@ -228,77 +228,3 @@ fn op_mklink(
 
     (op, undo)
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::{desktop_setter::utils::rollback::Transaction, types::err::MyResult};
-//     use std::path::{Path, PathBuf};
-
-//     /// 示例操作：创建目录
-//     pub fn create_dir_op(
-//         path: impl AsRef<Path>,
-//     ) -> (impl FnOnce() -> MyResult<()>, impl Fn() -> MyResult<()>) {
-//         let path = path.as_ref().to_path_buf();
-//         let op = move || {
-//             std::fs::create_dir_all(&path)?;
-//             Ok(())
-//         };
-//         let undo = |path: PathBuf| {
-//             if path.exists() {
-//                 std::fs::remove_dir_all(&path)?;
-//             }
-//             Ok(())
-//         };
-//         (op, undo)
-//     }
-
-//     /// 示例操作：创建符号链接
-//     #[cfg(unix)]
-//     pub fn create_symlink_op(
-//         src: impl AsRef<Path>,
-//         dst: impl AsRef<Path>,
-//     ) -> (
-//         impl FnOnce() -> std::io::Result<()>,
-//         impl Fn() -> std::io::Result<()>,
-//     ) {
-//         let src = src.as_ref().to_path_buf();
-//         let dst = dst.as_ref().to_path_buf();
-//         let op = move || {
-//             unix_fs::symlink(&src, &dst)?;
-//             Ok(())
-//         };
-//         let undo = move || {
-//             if dst.exists() {
-//                 fs::remove_file(&dst)?;
-//             }
-//             Ok(())
-//         };
-//         (op, undo)
-//     }
-
-//     #[test]
-//     fn test_transaction() {
-//         let mut tx = Transaction::new();
-
-//         // 测试创建目录
-//         let (op, undo) = create_dir_op("test_dir");
-//         assert!(tx.add_op(op, undo).is_ok());
-//         assert!(Path::new("test_dir").exists());
-
-//         // 测试回滚
-//         assert!(tx.rollback().is_ok());
-//         assert!(!Path::new("test_dir").exists());
-//     }
-
-//     #[test]
-//     fn test_auto_rollback() {
-//         {
-//             let mut tx = Transaction::new();
-//             let (op, undo) = create_dir_op("test_dir_auto");
-//             assert!(tx.add_op(op, undo).is_ok());
-//             assert!(Path::new("test_dir_auto").exists());
-//             // 未调用 commit，Drop 时自动回滚
-//         }
-//         assert!(!Path::new("test_dir_auto").exists());
-//     }
-// }
