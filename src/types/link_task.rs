@@ -1,16 +1,15 @@
 use crate::types::args::Args;
-#[cfg(feature = "regex")]
-use crate::types::err::ErrorCode;
-use crate::types::err::{MyError, MyResult};
-use crate::types::link_task_args::LinkTaskArgs;
+use crate::types::err::{ErrorCode, MyError, MyResult};
+use crate::types::link_task_args::{LinkTaskArgs, LinkTaskOpMode};
 use crate::types::link_task_pre::LinkTaskPre;
-use crate::utils::link::mklink;
+use crate::utils::func::mklink_pre_check;
+use crate::utils::link::{del_exists_link, mklink};
 use std::convert::TryFrom;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// 只创建链接以及创建时的相关处理
+/// 负责创建/移除/检查前的Re匹配与实际处理
 /// 可通过try_new或try_from构建
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct LinkTask {
     pub args: LinkTaskArgs,
     pub src_path: PathBuf,                              // 规范化后的源路径
@@ -20,6 +19,100 @@ pub struct LinkTask {
 }
 
 impl LinkTask {
+    pub fn work(mut self) -> MyResult<()> {
+        match self.args.op_mode {
+            LinkTaskOpMode::Check => {
+                log::info!("[check模式 (--check)]");
+                self.check_links()
+            }
+            LinkTaskOpMode::Remove => {
+                log::info!("[rm模式 (--rm)]");
+                self.remove_links()
+            }
+            LinkTaskOpMode::Make => self.mklinks(),
+        }
+    }
+
+    pub fn remove_links(mut self) -> MyResult<()> {
+        let log = |b: bool| {
+            if b {
+                log::info!("删除符号链接成功: {}", &self.src_path.display());
+            } else {
+                log::warn!("删除符号链接失败: {}", &self.src_path.display());
+            }
+        };
+        // 没有传入dst，使用src，（不用apply re后的）
+        if self.args.dst.is_none() {
+            del_exists_link(&self.src_path, true, Some(false)).map(log)
+            // 有dst用dst
+        } else {
+            #[cfg(feature = "regex")]
+            {
+                if self.args.re_pattern.is_some() {
+                    self.apply_re(None)?;
+                    let mut errs = Vec::new();
+                    let mut skip = Vec::new();
+                    for (_src, dst) in self.matched_paths.as_deref().unwrap() {
+                        let dst = self.dst_path.join(dst);
+                        match del_exists_link(&dst, true, Some(false)) {
+                            Ok(b) => {
+                                if !b {
+                                    skip.push(dst)
+                                }
+                            }
+                            Err(e) => errs.push(e),
+                        }
+                    }
+                    log::info!(
+                        "删除完成：{}条成功，{}条跳过，{}条失败，错误如下:\n{}\n跳过的路径如下:\n{}",
+                        self.matched_paths.unwrap().len() - skip.len() - errs.len(),
+                        errs.len(),
+                        skip.len(),
+                        errs.iter()
+                            .map(|e| { e.to_string() })
+                            .collect::<Vec<String>>()
+                            .join("\n"),
+                        skip.iter()
+                            .map(|t|format!("{}", t.display()))
+                            .collect::<Vec<String>>()
+                            .join("\n")
+                    )
+                } else {
+                    del_exists_link(&self.dst_path, true, Some(false)).map(log)?;
+                }
+            }
+            #[cfg(not(feature = "regex"))]
+            {
+                del_exists_link(&self.dst_path, true, Some(false)).map(log)?;
+            }
+            Ok(())
+        }
+    }
+
+    pub fn check_links(mut self) -> MyResult<()> {
+        // 没有传入dst，使用src
+        if self.args.dst.is_none() {
+            check_link(&self.src_path)
+        // 有dst用dst
+        } else {
+            #[cfg(feature = "regex")]
+            {
+                if self.args.re_pattern.is_some() {
+                    self.apply_re(None)?;
+                    for (_src, dst) in self.matched_paths.unwrap() {
+                        check_link(&self.dst_path.join(dst))?;
+                    }
+                } else {
+                    check_link(&self.dst_path)?;
+                }
+            }
+            #[cfg(not(feature = "regex"))]
+            check_link(&self.dst_path)?;
+
+            Ok(())
+        }
+    }
+
     #[cfg(not(feature = "regex"))]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         self._mklink()
@@ -254,6 +347,7 @@ impl TryFrom<&Args> for LinkTask {
         let mut task_pre = LinkTaskPre::from(args);
         task_pre.parse()?;
         let task = LinkTask::try_from(task_pre)?;
+        log::debug!("已从LinkTaskPre构建LinkTask");
         Ok(task)
     }
 }
@@ -295,6 +389,37 @@ impl LinkTask {
         let task = LinkTask::try_from(task_pre)?;
         Ok(task)
     }
+}
+
+fn check_link(src: &Path) -> MyResult<()> {
+    match mklink_pre_check(src) {
+        Ok(_) => (),
+        Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
+            let filetype = if src.is_dir() {
+                "DIR "
+            } else if src.is_file() {
+                "FILE"
+            } else {
+                "UNKOWN"
+            };
+            log::info!("{:7} {}", filetype, src.display(),);
+        }
+        Err(e) if e.code == ErrorCode::BrokenSymlink => {
+            log::warn!("SymLink(损坏) {}", src.display())
+        }
+        Err(e) if e.code == ErrorCode::FileNotExist => {
+            log::warn!("不存在 {}", src.display())
+        }
+        Err(e) if e.code == ErrorCode::TargetLinkExists => {
+            let target = std::fs::read_link(src);
+            match target {
+                Ok(dst) => log::info!("SymLink {:7} 指向 {}", src.display(), dst.display()),
+                Err(e) => log::error!("SymLink {} 指向未知，获取时出错：{}", src.display(), e),
+            };
+        }
+        Err(e) => log::warn!("错误：检查 {} 时发生未知错误: {}", src.display(), e),
+    };
+    Ok(())
 }
 
 // #[cfg(test)]

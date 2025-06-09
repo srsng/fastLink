@@ -62,7 +62,7 @@ jobs:
         run: cargo build --release --features=fastlink_slim --bin fastlink-slim --verbose
         
       # - name: Build Release Binary desks
-      #   run: cargo build --release --features desktop_setter --bin desks --verbose
+      #   run: cargo build --release --features=desktop_setter --bin desks --verbose
   
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2

@@ -114,7 +114,7 @@ fn op_del_link(
     // let src_c = src.clone();
     let dst_c = dst.clone();
 
-    let op = move || del_exists_link(&dst_c, true, Some(false));
+    let op = move || del_exists_link(&dst_c, true, Some(false)).map(|_| ());
     let undo = move || mklink(&src, &dst, Some(false), None, None, None, Some(true)).map(|_| ());
 
     (op, undo)
@@ -224,7 +224,7 @@ fn op_mklink(
 
     let op = move || mklink(&src, &dst, Some(false), None, None, None, Some(true)).map(|_| ());
 
-    let undo = move || del_exists_link(&dst_c, true, Some(true));
+    let undo = move || del_exists_link(&dst_c, true, Some(true)).map(|_| ());
 
     (op, undo)
 }

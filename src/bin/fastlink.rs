@@ -9,11 +9,7 @@ use std::path::Path;
 use fastlink::types::args::Args;
 use fastlink::utils::logs::init_log;
 
-use fastlink::utils::link::del_exists_link;
-use fastlink::{
-    types::{err::ErrorCode, link_task::LinkTask},
-    utils::func::mklink_pre_check,
-};
+use fastlink::types::link_task::LinkTask;
 
 fn main() {
     let args: Args = Args::parse();
@@ -26,75 +22,17 @@ fn main() {
     init_log(args.quiet, args.debug);
     log::debug!("{:?}", args);
 
-    if args.check || args.rm {
-        handle_sub_command(args);
-    } else {
-        special_warn(&args);
+    special_warn(&args);
 
-        let task_res = LinkTask::try_from(&args);
+    let task_res = LinkTask::try_from(&args);
 
-        match task_res {
-            Ok(mut task) => match task.mklinks() {
-                Ok(()) => (),
-                Err(e) => e.log(),
-            },
+    match task_res {
+        Ok(task) => match task.work() {
+            Ok(()) => (),
             Err(e) => e.log(),
-        }
-    }
-}
-
-fn handle_sub_command(args: Args) {
-    let check = args.check;
-    let rm = args.rm;
-    let src_path = Path::new(&args.src);
-    if check {
-        handle_check_command(src_path);
-        if rm {
-            log::warn!("rm模式请单独使用");
-        }
-    } else if rm {
-        handle_rm_command(src_path);
-    }
-}
-
-fn handle_check_command(src: &Path) {
-    log::info!("[check模式 (--check)]");
-    match mklink_pre_check(src) {
-        Ok(_) => (),
-        Err(e) if e.code == ErrorCode::TargetExistsAndNotLink => {
-            let filetype = if src.is_dir() {
-                "DIR"
-            } else if src.is_file() {
-                "FILE"
-            } else {
-                "UNKOWN TYPE"
-            };
-            log::info!("{} 是 {}", src.display(), filetype);
-        }
-        Err(e) if e.code == ErrorCode::BrokenSymlink => {
-            log::warn!("{} 是损坏的符号链接(Broken Symlink)", src.display())
-        }
-        Err(e) if e.code == ErrorCode::FileNotExist => {
-            log::warn!("{} 不存在", src.display())
-        }
-        Err(e) if e.code == ErrorCode::TargetLinkExists => {
-            let target = std::fs::read_link(src);
-            match target {
-                Ok(dst) => log::info!("{} 是符号链接，指向 {}", src.display(), dst.display()),
-                Err(e) => log::error!("{} 是符号链接，指向未知，获取时出错：{}", src.display(), e),
-            };
-        }
-        Err(e) => log::warn!("未知错误: {}", e),
-    }
-}
-
-fn handle_rm_command(src: &Path) {
-    log::info!("[rm模式 (--rm)]");
-    let del_link = true;
-    match del_exists_link(src, del_link, None) {
-        Ok(_) => (),
+        },
         Err(e) => e.log(),
-    };
+    }
 }
 
 /// 对一些特殊情况进行警告

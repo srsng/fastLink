@@ -82,6 +82,7 @@ fn handle_exists_link(
     dst: &Path,
     overwrite_links: bool,
     skip_exist_links: bool,
+    log: bool,
 ) -> Result<(), MyError> {
     // let metadata = fs::symlink_metadata(dst).map_err(|e| {
     //     MyError::new(
@@ -99,7 +100,14 @@ fn handle_exists_link(
         ))
     // 删除已存在链接
     } else if overwrite_links {
-        del_exists_link(dst, overwrite_links, None)
+        del_exists_link(dst, overwrite_links, None).map(|b| {
+            if log && b {
+                log::info!("删除符号链接成功: {}", dst.display());
+            } else if b {
+                log::debug!("删除符号链接成功: {}", dst.display());
+            }
+        })
+
     // 不处理，由调用函数错误处理时终止程序
     } else {
         Err(MyError::new(
@@ -132,14 +140,14 @@ fn handle_mklink_pre_check_error_for_dst(
             // 确定目标路径已存在符号链接，需要考虑覆写/跳过
             ErrorCode::TargetLinkExists => {
                 e.warn();
-                handle_exists_link(dst, overwrite_links, skip_exist_links)
+                handle_exists_link(dst, overwrite_links, skip_exist_links, true)
             }
             // 确定目标路径已存在且损坏的符号链接，需要考虑覆写/跳过
             ErrorCode::BrokenSymlink => {
                 e.warn();
                 // overwrite参数满足其一即可
                 let cond = overwrite_links || overwrite_broken_links;
-                handle_exists_link(dst, cond, skip_exist_links)
+                handle_exists_link(dst, cond, skip_exist_links, true)
             }
             _ => Err(e),
         }
@@ -153,7 +161,7 @@ pub fn del_exists_link(
     dst: &Path,
     overwrite_links: bool,
     not_exist_ok: Option<bool>,
-) -> Result<(), MyError> {
+) -> Result<bool, MyError> {
     if overwrite_links {
         // 检查是否是symlink
         match mklink_pre_check(dst) {
@@ -162,7 +170,7 @@ pub fn del_exists_link(
             Err(e) if e.code == ErrorCode::BrokenSymlink => Ok(()),
             Err(mut e) if e.code == ErrorCode::FileNotExist => {
                 if not_exist_ok.unwrap_or(true) {
-                    Ok(())
+                    return Ok(false);
                 } else {
                     e.msg = format!("目标不存在 {}", e.msg);
                     Err(e)
@@ -182,8 +190,7 @@ pub fn del_exists_link(
                     format!("(DIR) {}: {}", dst.display(), e),
                 )
             })?;
-            log::debug!("已删除符号链接 {}", dst.display());
-            Ok(())
+            Ok(true)
         } else if dst.is_file() {
             fs::remove_file(dst).map_err(|e| {
                 MyError::new(
@@ -191,8 +198,7 @@ pub fn del_exists_link(
                     format!("(FILE){}: {}", dst.display(), e),
                 )
             })?;
-            log::debug!("已删除符号链接 {}", dst.display());
-            Ok(())
+            Ok(true)
         } else {
             log::debug!("损坏的符号链接 {}, 尝试作为文件删除", dst.display());
             let res_file = fs::remove_file(dst);
@@ -207,20 +213,18 @@ pub fn del_exists_link(
                         ),
                     )
                 });
-                if res_dir.is_err() {
+                if let Err(e) = res_dir {
                     log::debug!("作为目录删除失败: {}", dst.display());
-                    res_dir
+                    Err(e)
                 } else {
-                    log::debug!("已删除符号链接 {}", dst.display());
-                    Ok(())
+                    Ok(false)
                 }
             } else {
-                log::debug!("已删除符号链接 {}", dst.display());
-                Ok(())
+                Ok(true)
             }
         }
     } else {
-        Ok(())
+        Ok(false)
     }
 }
 

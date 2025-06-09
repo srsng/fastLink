@@ -60,7 +60,7 @@ pub type MyResult<T> = Result<T, MyError>;
 
 impl fmt::Display for MyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", self.code, self.msg)
+        write!(f, "{}: {}", self.code, self.msg)
     }
 }
 

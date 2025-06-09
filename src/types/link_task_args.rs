@@ -4,19 +4,20 @@ use crate::types::args::Args;
 pub struct LinkTaskArgs {
     pub src: String,         // 原始源路径
     pub dst: Option<String>, // 原始目标路径
+    pub op_mode: LinkTaskOpMode,
     #[cfg(feature = "regex")]
     pub re_pattern: Option<regex::Regex>, // 正则表达式模式
     #[cfg(feature = "regex")]
     pub re_max_depth: usize, // 正则表达式模式最大深度
     #[cfg(feature = "regex")]
     pub re_follow_links: bool, // re匹配过程中深入读取符号链接进行匹配
-    pub keep_extention: bool, // 是否自动保留<SRC>的文件拓展名到[DST]
-    pub make_dir: bool,      // 是否自动创建不存在的目录
-    pub only_file: bool,     // 只处理文件
-    pub only_dir: bool,      // 只处理目录
-    pub overwrite_links: bool, // 覆盖同名已存在的符号链接
+    pub keep_extention: bool,        // 是否自动保留<SRC>的文件拓展名到[DST]
+    pub make_dir: bool,              // 是否自动创建不存在的目录
+    pub only_file: bool,             // 只处理文件
+    pub only_dir: bool,              // 只处理目录
+    pub overwrite_links: bool,       // 覆盖同名已存在的符号链接
     pub overwrite_broken_link: bool, // 覆盖同名已存在的损坏的符号链接
-    pub skip_exist_links: bool, // 跳过同名已存在的符号链接
+    pub skip_exist_links: bool,      // 跳过同名已存在的符号链接
     pub skip_broken_src_links: bool, // 跳过src中损坏的符号链接
     #[cfg(feature = "regex")]
     pub re_no_check: bool, // 跳过用户Re检查
@@ -25,11 +26,37 @@ pub struct LinkTaskArgs {
     pub allow_broken_src: bool,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum LinkTaskOpMode {
+    #[default]
+    Make,
+    Check,
+    Remove,
+}
+
+impl From<&Args> for LinkTaskOpMode {
+    fn from(args: &Args) -> Self {
+        let check = args.check;
+        let rm = args.rm;
+        if check {
+            if rm {
+                log::warn!("rm模式请单独使用");
+            }
+            Self::Check
+        } else if rm {
+            Self::Remove
+        } else {
+            Self::Make
+        }
+    }
+}
+
 impl From<&Args> for LinkTaskArgs {
     fn from(args: &Args) -> Self {
         LinkTaskArgs {
             src: args.src.clone(),
             dst: args.dst.clone(),
+            op_mode: LinkTaskOpMode::from(args),
             #[cfg(feature = "regex")]
             re_pattern: args.regex.clone(),
             #[cfg(feature = "regex")]
@@ -60,6 +87,7 @@ impl From<&Args> for LinkTaskArgs {
 pub struct LinkTaskArgsBuilder {
     src: String,
     dst: Option<String>,
+    op_mode: Option<LinkTaskOpMode>,
     #[cfg(feature = "regex")]
     re_pattern: Option<regex::Regex>,
     #[cfg(feature = "regex")]
@@ -125,6 +153,7 @@ impl LinkTaskArgsBuilder {
         LinkTaskArgs {
             src: self.src,
             dst: self.dst,
+            op_mode: self.op_mode.unwrap_or_default(),
             #[cfg(feature = "regex")]
             re_pattern: self.re_pattern,
             #[cfg(feature = "regex")]

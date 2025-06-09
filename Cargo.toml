@@ -1,6 +1,6 @@
 [package]
 name = "fastlink"
-version = "0.11.0"
+version = "0.11.1"
 edition = "2021"
 license = "Apache-2.0"
 
@@ -46,7 +46,8 @@ path = "src/bin/desktop_setter.rs"
 required-features = ["desktop_setter"]
 
 [features]
-default = ["fastlink_slim"]
+# default = ["fastlink_slim"]
+default = ["fastlink_full"]
 # default = ["desktop_setter"]
 
 # 正则表达式支持

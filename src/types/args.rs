@@ -64,10 +64,14 @@ pub struct Args {
     pub dst: Option<String>,
 
     /// 高优先级参数, 切换为检查模式，添加后不会创建链接: 检查<SRC>属性，包含文件/目录/符号链接，以及符号链接损坏与否
+    ///
+    /// 如果只给出<SRC>，则检查SRC，若同时传入DST，则检查DST.支持Re.
     #[arg(short, long)]
     pub check: bool,
 
     /// 高优先级参数, 切换为删除模式，添加后不会创建链接: 若<SRC>是符号链接，则删除。
+    ///
+    /// 如果只给出<SRC>，则删除SRC，若同时传入DST，则检查DST.支持Re.
     #[arg(long)]
     pub rm: bool,
 
@@ -170,7 +174,7 @@ pub struct Args {
     #[arg(long)]
     pub save_log: Option<String>,
 
-    /// 允许使用损坏的符号链接作为src
+    /// 允许使用损坏的符号链接作为src (开了也不行，想都别想)
     #[arg(long)]
     pub allow_broken_src: bool,
 }
@@ -237,21 +241,13 @@ pub fn get_re_max_depth(make_dir: bool, re_max_depth: usize) -> usize {
     if make_dir {
         re_max_depth
     } else {
-        log::warn!("{} 被设为1，因为没有传入参数`--make_dir`", re_max_depth);
+        log::warn!(
+            "re匹配最大深度 {} 被设为1，因为没有传入参数`--make_dir`",
+            re_max_depth
+        );
         1
     }
 }
-
-// pub fn handle_onlys(args: &Args) -> Result<(), MyError> {
-//     if args.only_dir && args.only_file {
-//         Err(MyError::new(
-//             ErrorCode::InvalidInput,
-//             "only_dir与only_file不应该同时传入！".to_string(),
-//         ))
-//     } else {
-//         Ok(())
-//     }
-// }
 
 // #[cfg(test)]
 // mod tests {

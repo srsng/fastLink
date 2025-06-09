@@ -1,6 +1,6 @@
 use crate::types::args::Args;
 use crate::types::err::{ErrorCode, MyError, MyResult};
-use crate::types::link_task_args::LinkTaskArgs;
+use crate::types::link_task_args::{LinkTaskArgs, LinkTaskOpMode};
 use path_clean::PathClean;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -17,6 +17,7 @@ pub struct LinkTaskPre {
 
 impl From<&Args> for LinkTaskPre {
     fn from(args: &Args) -> Self {
+        log::debug!("已从Args构建LinkTaskPre");
         LinkTaskPre {
             args: LinkTaskArgs::from(args),
             src_path: None,
@@ -93,6 +94,8 @@ pub fn check_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
 /// 为[DST]自动追加<SRC>名称、拓展名都在这实现
 pub fn parse_args_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
     let src_path = Path::new(&task_args.src);
+    let log = task_args.op_mode == LinkTaskOpMode::Make;
+
     let mut final_dst = match &task_args.dst {
         Some(d) => {
             // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
@@ -100,13 +103,15 @@ pub fn parse_args_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
             let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
             // 规范化
             if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
-                crate::utils::path::canonicalize_path(&dst_path.join(default_dst_path(src_path)))?
+                crate::utils::path::canonicalize_path(
+                    &dst_path.join(default_dst_path(src_path, log)),
+                )?
             } else {
                 crate::utils::path::canonicalize_path(&PathBuf::from(d))?
             }
         }
         // 没有传入DST: 使用SRC文件名
-        None => default_dst_path(src_path),
+        None => default_dst_path(src_path, log),
     };
 
     // 处理keep_extension: 是否保留拓展名
@@ -121,14 +126,19 @@ pub fn validate_dst(task_args: &LinkTaskArgs, dst: &Path) -> Result<PathBuf, MyE
     // dst: &Path, make_dir: bool
     log::debug!("validate_dst/dst: {}", dst.display());
 
-    let dst_parent_option = dst.parent();
-    // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
-    let dst = handle_validate_dst_parent_not_exist(dst, task_args.make_dir, dst_parent_option)?;
-    handle_validate_dst_dir_not_exists(dst, task_args.make_dir)
+    if task_args.op_mode != LinkTaskOpMode::Make {
+        Ok(dst.to_path_buf())
+    } else {
+        let dst_parent_option = dst.parent();
+        log::debug!("{:?}", dst_parent_option);
+        // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
+        let dst = handle_validate_dst_parent_not_exist(dst, task_args.make_dir, dst_parent_option)?;
+        handle_validate_dst_dir_not_exists(dst, task_args.make_dir)
+    }
 }
 
 /// 生成默认目标路径
-fn default_dst_path(src: &Path) -> PathBuf {
+fn default_dst_path(src: &Path, log: bool) -> PathBuf {
     let base_name = src.file_stem().unwrap_or_else(|| {
         src.file_name().unwrap_or_else(|| {
             log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
@@ -136,12 +146,20 @@ fn default_dst_path(src: &Path) -> PathBuf {
         })
     });
 
-    // 输出日志信息
-    log::info!(
-        "已由<SRC>确定目标名 {} → {}",
-        src.display(),
-        base_name.to_string_lossy()
-    );
+    if log {
+        // 输出日志信息
+        log::info!(
+            "已由<SRC>确定目标名 {} → {}",
+            src.display(),
+            base_name.to_string_lossy()
+        );
+    } else {
+        log::debug!(
+            "已由<SRC>确定目标名 {} → {}",
+            src.display(),
+            base_name.to_string_lossy()
+        );
+    }
 
     PathBuf::from(base_name)
 }

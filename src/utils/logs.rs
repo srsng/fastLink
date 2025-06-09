@@ -105,13 +105,13 @@ pub fn init_log(quiet: bool, debug: bool, #[cfg(feature = "save_log")] save_log:
 
             // 格式化输出
             if debug {
+                // let module = record.module_path().unwrap_or("unknown_modul");     // 模块路径
+                let file = record.file().unwrap_or("unknown_file");   // 文件名
+                let file_line = record.line().unwrap_or(0);            // 行号
+                let content = record.args();                        // 日志内容
                 writeln!(
                     buf,
-                    "{time_style}{time}{} {} ({}){time_style:#} {level_style}{level}{level_style:#} {}",
-                    record.module_path().unwrap_or("unknown_modul"), // 模块路径
-                    record.file().unwrap_or("unknown_file"),         // 文件名
-                    record.line().unwrap_or(0),                      // 行号
-                    record.args()                                    // 日志内容
+                    "{time_style}{time} {file}:{file_line}{time_style:#} {level_style}{level}{level_style:#} {content}",                           
                 )
             } else {
                 writeln!(
