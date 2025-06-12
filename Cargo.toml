@@ -1,7 +1,7 @@
 [package]
 authors = ["srsnng"]
 name = "fastlink"
-version = "0.11.2"
+version = "0.11.3"
 edition = "2021"
 license = "Apache-2.0"
 
@@ -48,7 +48,7 @@ required-features = ["desktop_setter"]
 
 [features]
 # default = []
-default = ["fastlink_slim"]
+# default = ["fastlink_slim"]
 # default = ["fastlink_full"]
 # default = ["desktop_setter"]
 

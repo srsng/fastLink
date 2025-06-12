@@ -1,5 +1,5 @@
 pub mod init;
-pub mod origin;
+pub mod original;
 pub mod reset;
 pub mod set;
 pub mod state;

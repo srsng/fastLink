@@ -1,6 +1,6 @@
 use clap::Parser;
 use fastlink::desktop_setter::handler::{
-    init::handle_desktop_init, origin::handle_desktop_origin, reset::handle_desktop_reset,
+    init::handle_desktop_init, original::handle_desktop_origin, reset::handle_desktop_reset,
     set::handle_desktop_set, state::handle_desktop_state, usual::handle_desktop_usual,
 };
 use fastlink::desktop_setter::types::args::Args;

@@ -33,56 +33,62 @@ impl LinkTask {
         }
     }
 
-    pub fn remove_links(mut self) -> MyResult<()> {
-        let log = |b: bool| {
+    fn remove_links_log(self) -> impl FnOnce(bool) {
+        move |b: bool| {
             if b {
                 log::info!("删除符号链接成功: {}", &self.src_path.display());
             } else {
                 log::warn!("删除符号链接失败: {}", &self.src_path.display());
             }
-        };
-        // 没有传入dst，使用src，（不用apply re后的）
-        if self.args.dst.is_none() {
-            del_exists_link(&self.src_path, true, Some(false)).map(log)
-            // 有dst用dst
-        } else {
-            #[cfg(feature = "regex")]
-            {
-                if self.args.re_pattern.is_some() {
-                    self.apply_re(None)?;
+        }
+    }
 
-                    // 错误数据与跳过的路径
-                    let mut errs = Vec::new();
-                    let mut skip = Vec::new();
+    #[cfg(not(feature = "regex"))]
+    fn remove_links_with_dst(self) -> MyResult<()> {
+        del_exists_link(&self.dst_path, true, Some(false)).map(self.remove_links_log())
+    }
 
-                    // 删除链接并记录数据
-                    for (_src, dst) in self.matched_paths.as_deref().unwrap() {
-                        let dst = self.dst_path.join(dst);
-                        match del_exists_link(&dst, true, Some(false)) {
-                            Ok(b) => {
-                                if !b {
-                                    skip.push(dst)
-                                }
-                            }
-                            Err(e) => errs.push(e),
+    #[cfg(feature = "regex")]
+    fn remove_links_with_dst(mut self) -> MyResult<()> {
+        if self.args.re_pattern.is_some() {
+            self.apply_re(None)?;
+
+            // 错误数据与跳过的路径
+            let mut errs = Vec::new();
+            let mut skip = Vec::new();
+
+            // 删除链接并记录数据
+            for (_src, dst) in self.matched_paths.as_deref().unwrap() {
+                let dst = self.dst_path.join(dst);
+                match del_exists_link(&dst, true, Some(false)) {
+                    Ok(b) => {
+                        if !b {
+                            skip.push(dst)
                         }
                     }
-                    // 日志输出信息
-                    self.remove_links_log(skip, errs);
-                } else {
-                    del_exists_link(&self.dst_path, true, Some(false)).map(log)?;
+                    Err(e) => errs.push(e),
                 }
             }
-            #[cfg(not(feature = "regex"))]
-            {
-                del_exists_link(&self.dst_path, true, Some(false)).map(log)?;
-            }
+            // 日志输出信息
+            self.remove_links_summary_log(skip, errs);
             Ok(())
+        } else {
+            del_exists_link(&self.dst_path, true, Some(false)).map(self.remove_links_log())
+        }
+    }
+
+    pub fn remove_links(self) -> MyResult<()> {
+        // 没有传入dst，使用src，（不用apply re后的）
+        if self.args.dst.is_none() {
+            del_exists_link(&self.src_path, true, Some(false)).map(self.remove_links_log())
+        // 有dst用dst
+        } else {
+            self.remove_links_with_dst()
         }
     }
 
     #[cfg(feature = "regex")]
-    fn remove_links_log(self, skip: Vec<PathBuf>, errs: Vec<MyError>) {
+    fn remove_links_summary_log(self, skip: Vec<PathBuf>, errs: Vec<MyError>) {
         log::info!(
             "删除完成：{}条成功，{}条跳过，{}条失败",
             self.matched_paths.unwrap().len() - skip.len() - errs.len(),
@@ -109,27 +115,31 @@ impl LinkTask {
         }
     }
 
-    pub fn check_links(mut self) -> MyResult<()> {
+    #[cfg(not(feature = "regex"))]
+    fn check_links_with_dst(self) -> MyResult<()> {
+        check_link(&self.dst_path)
+    }
+
+    #[cfg(feature = "regex")]
+    fn check_links_with_dst(mut self) -> MyResult<()> {
+        if self.args.re_pattern.is_some() {
+            self.apply_re(None)?;
+            for (_src, dst) in self.matched_paths.unwrap() {
+                check_link(&self.dst_path.join(dst))?;
+            }
+            Ok(())
+        } else {
+            check_link(&self.dst_path)
+        }
+    }
+
+    pub fn check_links(self) -> MyResult<()> {
         // 没有传入dst，使用src
         if self.args.dst.is_none() {
             check_link(&self.src_path)
         // 有dst用dst
         } else {
-            #[cfg(feature = "regex")]
-            {
-                if self.args.re_pattern.is_some() {
-                    self.apply_re(None)?;
-                    for (_src, dst) in self.matched_paths.unwrap() {
-                        check_link(&self.dst_path.join(dst))?;
-                    }
-                } else {
-                    check_link(&self.dst_path)?;
-                }
-            }
-            #[cfg(not(feature = "regex"))]
-            check_link(&self.dst_path)?;
-
-            Ok(())
+            self.check_links_with_dst()
         }
     }
 
