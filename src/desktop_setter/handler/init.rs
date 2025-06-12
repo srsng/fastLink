@@ -65,7 +65,7 @@ pub fn handle_desktop_init() -> MyResult<()> {
         );
         Err(MyError::new(
             ErrorCode::Unknown,
-            format!("意外情况, 无法处理"),
+            "意外情况, 无法处理".to_string(),
         ))
     }
     // handle_path_type_res(path_type_res, desktop.as_path())?;

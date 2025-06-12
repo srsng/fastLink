@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    desktop_setter::{types::state::DESKTOP_STATE, utils::rollback::Transaction},
+    desktop_setter::{
+        handler::fresh::handle_fresh_desktop, types::state::DESKTOP_STATE,
+        utils::rollback::Transaction,
+    },
     types::err::{ErrorCode, MyError, MyResult},
     utils::fs::mk_parents,
 };
@@ -65,8 +68,10 @@ pub fn handle_desktop_set(
             state.cur_target = Some(path.clone());
         }
         {
-            DESKTOP_STATE.save()
+            DESKTOP_STATE.save()?;
         }
+        handle_fresh_desktop();
+        Ok(())
     }
     // Ok(())
 }

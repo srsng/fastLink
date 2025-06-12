@@ -22,6 +22,11 @@ strip-ansi-escapes = { version = "0.2.1", optional = true }
 walkdir = { version = "2.5.0", optional = true }
 winreg = { version = "0.55.0", optional = true }
 
+[dependencies.windows]
+ version = "0.52.0"
+ features = ["Win32_UI_Shell", "Win32_Foundation"] 
+ optional = true
+
 [dev-dependencies]
 tempfile = "3.20.0"
 
@@ -50,7 +55,7 @@ required-features = ["desktop_setter"]
 # default = []
 # default = ["fastlink_slim"]
 # default = ["fastlink_full"]
-# default = ["desktop_setter"]
+default = ["desktop_setter"]
 
 # 正则表达式支持
 regex = ["dep:regex", "walkdir"]
@@ -61,4 +66,4 @@ fastlink_full = ["regex", "save_log"]
 # slim版
 fastlink_slim = []
 # 其他bin
-desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell"]
+desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell", "windows"]
