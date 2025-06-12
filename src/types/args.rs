@@ -93,10 +93,14 @@ pub struct Args {
     pub debug: bool,
 
     #[cfg(feature = "regex")]
-    /// 对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建，
-    /// 若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建，
+    /// 对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建。对于程序如何处理多层级的目录见only_dir参数
+    ///
+    /// 注：若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建，
     /// 若要限制深度，使用--re-max-depth参数。
-    /// 匹配的路径不受--keep_extention参数影响。
+    ///
+    /// 注：匹配的路径不受--keep_extention参数影响。
+    ///
+    /// 注：只会为最深层的目录创建符号链接，其他层次目录则会正常创建文件夹
     #[arg(long, visible_alias("re"), value_parser = validate_regex)]
     pub regex: Option<regex::Regex>,
 
@@ -107,11 +111,18 @@ pub struct Args {
     #[arg(long, visible_alias("re-depth"), value_parser = validate_re_max_depth)]
     pub re_max_depth: Option<usize>,
 
-    /// 只处理文件，同时传入only-dir则出错
+    /// 只为文件创建符号链接，但仍然会创建目录
     #[arg(long, conflicts_with = "only_dir", visible_alias("F"))]
     pub only_file: bool,
 
-    /// 只处理目录，同时传入only-file则出错
+    /// 只为最深目录创建符号链接，其他目录则会创建文件夹，受re-depth参数约束
+    ///
+    /// 程序将如何为目录创建符号链接？
+    /// e.g.1 给定src的子目录最深为5层，re-depth参数默认为4层，会为层级为4的目录创建符号链接，
+    /// 1、2、3层只会创建文件夹
+    ///
+    /// e.g.2 给定src的子目录最深为3层，re-depth参数默认为4层，会为层级为3的目录创建符号链接，
+    /// 1、2层只会创建文件夹
     #[arg(long, conflicts_with = "only_file", visible_alias("D"))]
     pub only_dir: bool,
 
@@ -236,6 +247,8 @@ fn validate_re_max_depth(s: &str) -> Result<usize, String> {
     }
 }
 
+// todo: 尽可能早完成，不放到task内
+/// 根据make-dir参数、默认depth以及传入depth获取应有的depth
 #[cfg(feature = "regex")]
 pub fn get_re_max_depth(make_dir: bool, re_max_depth: usize) -> usize {
     if make_dir {

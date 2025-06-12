@@ -34,22 +34,19 @@ pub enum Commands {
         #[arg(short, long, value_parser = validate_usual)]
         usual: Option<String>,
     },
+
     /// 获取当前状态
     State,
 
     /// 设置Desktop库为原始的目录
-    Origin,
-
-    /// origin的简短形式
-    O,
+    #[clap(visible_alias = "o", visible_alias = "ori")]
+    Original,
 
     /// 快速切换为通过set --usual <name>设置的一些常用路径，使用state命令查看已设置列表
+    #[clap(visible_alias = "u", visible_alias = "switch")]
     Usual { name: String },
 
-    /// usual简短形式
-    U { name: String },
-
-    /// 重置，将Desktop库恢复
+    /// 重置所有数据，并将Desktop库恢复为原始状态
     Reset,
 }
 // / 1. 是否存在于文件系统(FileNotExist)

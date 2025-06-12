@@ -133,7 +133,7 @@ fn handle_mklink_pre_check_error_for_dst(
                 if allow_broken_src {
                     Ok(())
                 } else {
-                    e.msg = format!("无法创建链接：src部分为损坏的符号链接 {}", e.msg);
+                    e.msg = format!("无法创建链接：dst部分存在且不是符号链接 {}", e.msg);
                     Err(e)
                 }
             }
@@ -145,7 +145,7 @@ fn handle_mklink_pre_check_error_for_dst(
             // 确定目标路径已存在且损坏的符号链接，需要考虑覆写/跳过
             ErrorCode::BrokenSymlink => {
                 e.warn();
-                // overwrite参数满足其一即可
+                // 两overwrite相关参数满足其一即可
                 let cond = overwrite_links || overwrite_broken_links;
                 handle_exists_link(dst, cond, skip_exist_links, true)
             }

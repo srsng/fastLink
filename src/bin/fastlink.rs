@@ -1,6 +1,8 @@
 // todo: 编写tests
 // todo：编写文档
 // todo: 清理无用代码
+// 添加子命令wallpaper/w，并且增加桌面绑定壁纸功能（不兼容wallpaper engine等软件，因此需要手动开启）
+// 增加修改桌面后自动刷新（F5效果）桌面
 // 其他行内todo
 
 use clap::Parser;

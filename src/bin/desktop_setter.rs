@@ -34,7 +34,7 @@ fn handle_desktop_setter(args: Args) -> MyResult<()> {
             usual,
         } => handle_desktop_set(new_desktop_dir_path, make_dir, usual),
         Commands::State => handle_desktop_state(),
-        Commands::Origin | Commands::O => handle_desktop_origin(),
-        Commands::Usual { name } | Commands::U { name } => handle_desktop_usual(name),
+        Commands::Original => handle_desktop_origin(),
+        Commands::Usual { name } => handle_desktop_usual(name),
     }
 }

@@ -94,6 +94,12 @@ pub fn display_paginated_paths(
         if start >= end {
             break;
         }
+
+        if end == total_paths {
+            println!("\n所有路径已显示。");
+            break;
+        }
+
         let page_paths = &paths[start..end];
         log::info!(
             "\n匹配的路径 ({} 到 {}，共 {} 条):\n{}",
@@ -102,11 +108,6 @@ pub fn display_paginated_paths(
             total_paths,
             format_matched_paths(page_paths)
         );
-
-        if end == total_paths {
-            println!("\n所有路径已显示。");
-            break;
-        }
 
         println!("\n按 Enter 显示下一页，'a' 显示全部，'q' 退出并直接创建链接，Ctrl+C 取消创建:");
         io::stdout()
@@ -157,11 +158,11 @@ pub fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
         .enumerate()
         .map(|(i, (src, dst))| {
             format!(
-                "{:4}. <SRC>{PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#} -> [DST]{PARENT_STYLE}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#}",
+                "{:4}. <SRC>{PARENT_STYLE}{MAIN_SEPARATOR}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#} -> [DST]{PARENT_STYLE}{MAIN_SEPARATOR}{}{MAIN_SEPARATOR}{PARENT_STYLE:#}{FILE_STYLE}{:?}{FILE_STYLE:#}",
                 i + 1,
-                src.parent().unwrap_or_else(|| Path::new("")).display(),
+                src.parent().unwrap_or_else(|| Path::new("\\")).display(),
                 src.file_name().unwrap_or(std::ffi::OsStr::new("[error: Unknown]")),
-                dst.parent().unwrap_or_else(|| Path::new("")).display(),
+                dst.parent().unwrap_or_else(|| Path::new("\\")).display(),
                 dst.file_name().unwrap_or(std::ffi::OsStr::new("[error: Unknown]")),
             )
         })
