@@ -101,6 +101,12 @@ pub fn parse_args_dst(task_args: &LinkTaskArgs) -> MyResult<PathBuf> {
             // SRC是文件而DST是目录的情况: 为DST追加SRC文件名
             let dst_path = Path::new(&d);
             let is_dst_dir_intended = d.ends_with('/') || d.ends_with('\\');
+
+            // bug todo: 目录/文件判定有问题
+            // 如` fastlink "...AppData\Roaming\com.resources-manager.app\" ./123/  -k --debug`
+            // (src为目录)
+            // dst被修改为123.app
+
             // 规范化
             if src_path.is_file() && (dst_path.is_dir() || is_dst_dir_intended) {
                 crate::utils::path::canonicalize_path(
@@ -129,6 +135,7 @@ pub fn validate_dst(task_args: &LinkTaskArgs, dst: &Path) -> Result<PathBuf, MyE
     if task_args.op_mode != LinkTaskOpMode::Make {
         Ok(dst.to_path_buf())
     } else {
+        // todo: dst为空时传入自动从src获取名称的dst的parent为Some("")
         let dst_parent_option = dst.parent();
         log::debug!("{:?}", dst_parent_option);
         // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错
@@ -223,19 +230,27 @@ fn handle_validate_dst_parent_not_exist(
     make_dir: bool,
     dst_parent_option: Option<&Path>,
 ) -> Result<PathBuf, MyError> {
-    if dst_parent_option.is_some() && !dst_parent_option.unwrap().exists() {
-        let dst_parent = dst_parent_option.unwrap().clean();
-        if make_dir {
-            // 创建目录并处理错误
-            Ok(handle_validate_dst_mkdirs(dst, dst_parent)?)
+    if let Some(parent) = dst_parent_option {
+        // log::debug!("validate_dst/parent.exists(): {}", parent.exists());
+
+        // dst未传入的情况
+        if parent == Path::new("") {
+            Ok(crate::WORK_DIR.to_path_buf().join(dst))
+        } else if !parent.exists() {
+            if make_dir {
+                // 创建目录并处理错误
+                Ok(handle_validate_dst_mkdirs(dst, parent)?)
+            } else {
+                Err(MyError::new(
+                    ErrorCode::ParentNotExist,
+                    format!(
+                        "[DST]父目录: {} 不存在，若需自动创建请添加参数--make-dir或--md",
+                        parent.display()
+                    ),
+                ))
+            }
         } else {
-            Err(MyError::new(
-                ErrorCode::ParentNotExist,
-                format!(
-                    "[DST]父目录: {} 不存在，若需自动创建请添加参数--make-dir或--md",
-                    dst_parent.display()
-                ),
-            ))
+            Ok(dst.to_path_buf())
         }
     } else {
         Ok(dst.to_path_buf())
@@ -243,8 +258,8 @@ fn handle_validate_dst_parent_not_exist(
 }
 
 /// 为validate_dst函数（handle_validate_dst_parent_not_exist函数）处理创建目录及相关错误
-fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: PathBuf) -> Result<PathBuf, MyError> {
-    match crate::utils::fs::mkdirs(&dst_parent) {
+fn handle_validate_dst_mkdirs(dst: &Path, dst_parent: &Path) -> Result<PathBuf, MyError> {
+    match crate::utils::fs::mkdirs(dst_parent) {
         Ok(_) => {
             log::warn!("[DST]父目录不存在，已创建: {}", dst_parent.display());
             // 重新组合dst路径
