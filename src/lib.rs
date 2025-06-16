@@ -1,4 +1,4 @@
-#[cfg(feature = "desktop_setter")]
+#[cfg(feature = "desktop-setter")]
 pub mod desktop_setter;
 pub mod types;
 pub mod utils;

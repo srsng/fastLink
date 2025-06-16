@@ -43,12 +43,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "fatlink_regex"))]
+    #[cfg(not(feature = "fatlink-regex"))]
     fn remove_links_with_dst(self) -> MyResult<()> {
         del_exists_link(&self.dst_path, true, Some(false)).map(self.remove_links_log())
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     fn remove_links_with_dst(mut self) -> MyResult<()> {
         if self.args.re_pattern.is_some() {
             self.apply_re(None)?;
@@ -87,7 +87,7 @@ impl LinkTask {
         }
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     fn remove_links_summary_log(self, skip: Vec<PathBuf>, errs: Vec<MyError>) {
         log::info!(
             "删除完成：{}条成功，{}条跳过，{}条失败",
@@ -115,12 +115,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "fatlink_regex"))]
+    #[cfg(not(feature = "fatlink-regex"))]
     fn check_links_with_dst(self) -> MyResult<()> {
         check_link(&self.dst_path)
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     fn check_links_with_dst(mut self) -> MyResult<()> {
         if self.args.re_pattern.is_some() {
             self.apply_re(None)?;
@@ -143,12 +143,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "fatlink_regex"))]
+    #[cfg(not(feature = "fatlink-regex"))]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         self._mklink()
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         match &self.args.re_pattern {
             None => self._mklink(),
@@ -159,7 +159,7 @@ impl LinkTask {
         }
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     fn _mklinks_re(&self) -> Result<(), MyError> {
         if self
             .matched_paths
@@ -264,7 +264,7 @@ impl LinkTask {
         Ok(())
     }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 包装apply_re相关逻辑，通过_apply_re完成应用re检查，修改matched_paths, dirs_to_create
     pub fn apply_re(&mut self, force: Option<bool>) -> Result<(), MyError> {
         // todo 优化regex Option检查
@@ -274,13 +274,13 @@ impl LinkTask {
         Ok(())
     }
 
-    // #[cfg(not(feature = "fatlink_regex"))]
+    // #[cfg(not(feature = "fatlink-regex"))]
     // /// 为了统一函数调用的非regex特性下的apply_re，空操作且不需要可变借用
     // pub fn apply_re(&self, _force: Option<bool>) -> Result<(), MyError> {
     //     Ok(())
     // }
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 应用re检查，更新 matched_paths 和 dirs_to_create
     /// 使用了参数only_file， only_dir， re_output_flatten
     fn _apply_re(&mut self) -> Result<(), MyError> {

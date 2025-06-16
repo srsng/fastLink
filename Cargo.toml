@@ -24,7 +24,7 @@ winreg = { version = "0.55.0", optional = true }
 [dependencies.windows]
 version = "0.52.0"
 optional = true
-features = ["Win32_UI_Shell", "Win32_Foundation"] 
+features = ["Win32_UI_Shell", "Win32_Foundation"]
 
 [dependencies.regex]
 version = "1.11.1"
@@ -37,38 +37,51 @@ tempfile = "3.20.0"
 
 [profile.release]
 opt-level = 3
-lto = "thin"
+strip = "symbols"
 codegen-units = 1
-strip = true
+debug = "none"
+debug-assertions = false
+overflow-checks = false
+lto = "fat"
+panic = "abort"
+incremental = false
 
 [[bin]]
 name = "fastlink"
 path = "src/bin/fastlink.rs"
-required-features = ["fastlink_full"]
+required-features = ["fastlink-full"]
 
 [[bin]]
 name = "fastlink-slim"
 path = "src/bin/fastlink.rs"
-required-features = ["fastlink_slim"]
+required-features = ["fastlink-slim"]
 
 [[bin]]
 name = "desks"
 path = "src/bin/desktop_setter.rs"
-required-features = ["desktop_setter"]
+required-features = ["desktop-setter"]
 
 [features]
 default = []
-# default = ["fastlink_slim"]
-# default = ["fastlink_full"]
-# default = ["desktop_setter"]
+# default = ["fastlink-slim"]
+# default = ["fastlink-full"]
+# default = ["desktop-setter"]
 
 # fastlink 正则表达式支持
-fatlink_regex = ["regex", "walkdir"]
-save_log = ["strip-ansi-escapes"]
+fatlink-regex = ["dep:regex", "dep:walkdir"]
+# 保存日志
+save-log = ["dep:strip-ansi-escapes"]
 
 # 完整版，包含所有功能
-fastlink_full = ["fatlink_regex", "save_log"]
+"fastlink-full" = ["fatlink-regex", "save-log"]
 # slim版
-fastlink_slim = []
+"fastlink-slim" = []
 # 其他bin
-desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell", "dep:windows"]
+desktop-setter = [
+    "dep:winreg",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:dirs",
+    "dep:once_cell",
+    "dep:windows",
+]

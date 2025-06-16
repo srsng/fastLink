@@ -2,7 +2,7 @@ use crate::types::err::{ErrorCode, MyError};
 use clap::Parser;
 use path_clean::PathClean;
 
-#[cfg(feature = "fatlink_regex")]
+#[cfg(feature = "fatlink-regex")]
 pub const DEFAULT_RE_MAX_DEPTH: usize = 4;
 
 use crate::types::args_example_text::EXAMPLE;
@@ -25,7 +25,7 @@ use crate::types::args_example_text::EXAMPLE;
 //     fastlink data.csv ../
 // "#;
 
-// #[cfg(feature = "fatlink_regex")]
+// #[cfg(feature = "fatlink-regex")]
 // const EXAMPLE_OF_RE: &str = r#"
 //     // 为./test-dir目录中所有满足.*\.txt正则表达式的路径（即所有txt文件） 创建链接到output目录中
 //     fastlink ./test-dir output --re .*\.txt
@@ -37,7 +37,7 @@ use crate::types::args_example_text::EXAMPLE;
 //     fastlink ./test-dir output --re .*\.txt --flatten
 // "#;
 
-// #[cfg(feature = "save_log")]
+// #[cfg(feature = "save-log")]
 // const EXAMPLE_OF_SAVE_LOG: &str = r#"
 //     // 保存日志到指定文件
 //     fastlink document.txt --save-log my_log.log
@@ -94,7 +94,7 @@ pub struct Args {
     #[arg(long)]
     pub debug: bool,
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 对<SRC>内容应用正则表达式，匹配项将于[DST]相应创建。对于程序如何处理多层级的目录见only_dir参数
     ///
     /// 注：若启用make_dir参数，则还会尝试对<SRC>的子目录以及更深层(默认最大4层)进行匹配并创建，
@@ -106,7 +106,7 @@ pub struct Args {
     #[arg(long, visible_alias("re"), value_parser = validate_regex)]
     pub regex: Option<regex::Regex>,
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 限制regex匹配的最大深度，启用make_dir参数时，默认4层，否则为1层,
     /// 传入0表示没有层数限制.
     /// 该参数数值非负.
@@ -128,17 +128,17 @@ pub struct Args {
     #[arg(long, conflicts_with = "only_file", visible_alias("D"))]
     pub only_dir: bool,
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// re匹配过程中，深入读取符号链接进行匹配
     #[arg(long, visible_alias("follow-links"), visible_alias("follow-link"))]
     pub re_follow_links: bool,
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 取消re匹配后，创建链接前的用户手动检查阶段
     #[arg(long, visible_alias("no-check"))]
     pub re_no_check: bool,
 
-    #[cfg(feature = "fatlink_regex")]
+    #[cfg(feature = "fatlink-regex")]
     /// 对于re匹配的后所有内容，不按照原本目录（镜像）创建链接，
     /// 而是直接创建到[DST]中。
     /// 如果匹配的文件名有重复，则会拒绝创建并报错
@@ -181,7 +181,7 @@ pub struct Args {
     )]
     pub skip_broken_src_links: bool,
 
-    #[cfg(feature = "save_log")]
+    #[cfg(feature = "save-log")]
     /// 在目标路径输出/保存/导出本次处理日志
     /// 若路径不存在，则将当前工作目录并重命名为fastlink-%y-%m-%d-%h-%m-%s.log
     #[arg(long)]
@@ -205,23 +205,23 @@ impl Default for Args {
             make_dir: false,
             quiet: false,
             debug: false,
-            #[cfg(feature = "fatlink_regex")]
+            #[cfg(feature = "fatlink-regex")]
             regex: None,
-            #[cfg(feature = "fatlink_regex")]
+            #[cfg(feature = "fatlink-regex")]
             re_max_depth: None,
             only_file: false,
             only_dir: false,
-            #[cfg(feature = "fatlink_regex")]
+            #[cfg(feature = "fatlink-regex")]
             re_follow_links: false,
-            #[cfg(feature = "fatlink_regex")]
+            #[cfg(feature = "fatlink-regex")]
             re_no_check: false,
-            #[cfg(feature = "fatlink_regex")]
+            #[cfg(feature = "fatlink-regex")]
             re_output_flatten: false,
             overwrite_links: false,
             overwrite_broken_link: true,
             skip_exist_links: false,
             skip_broken_src_links: true,
-            #[cfg(feature = "save_log")]
+            #[cfg(feature = "save-log")]
             save_log: None,
             allow_broken_src: false,
         }
@@ -241,7 +241,7 @@ fn validate_src(s: &str) -> Result<String, String> {
     }
 }
 
-#[cfg(feature = "fatlink_regex")]
+#[cfg(feature = "fatlink-regex")]
 /// 检查re表达式
 pub fn validate_regex(pattern: &str) -> Result<regex::Regex, String> {
     if pattern.trim().is_empty() {
@@ -259,7 +259,7 @@ pub fn validate_regex(pattern: &str) -> Result<regex::Regex, String> {
     })
 }
 
-#[cfg(feature = "fatlink_regex")]
+#[cfg(feature = "fatlink-regex")]
 /// 检查re匹配时最大深度
 fn validate_re_max_depth(s: &str) -> Result<usize, String> {
     if s.trim().is_empty() {
@@ -287,7 +287,7 @@ fn validate_re_max_depth(s: &str) -> Result<usize, String> {
 
 // todo: 尽可能早完成，不放到task内
 /// 根据make-dir参数、默认depth以及传入depth获取应有的depth
-#[cfg(feature = "fatlink_regex")]
+#[cfg(feature = "fatlink-regex")]
 pub fn get_re_max_depth(make_dir: bool, re_max_depth: usize) -> usize {
     if make_dir {
         re_max_depth

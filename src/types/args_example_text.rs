@@ -1,5 +1,5 @@
 // todo: 使用更舒服的方式创建EXAMPLE
-#[cfg(feature = "fastlink_slim")]
+#[cfg(feature = "fastlink-slim")]
 pub const EXAMPLE: &str = r#"
 Example：
     // 1. 在当前目录创建一个名为document.txt的符号链接（没有给出dst，直接用src文件名）
@@ -23,7 +23,7 @@ Example：
     fastlink mydir/ backup/ --md
 "#;
 
-#[cfg(not(feature = "fastlink_slim"))]
+#[cfg(not(feature = "fastlink-slim"))]
 pub const EXAMPLE: &str = r#"
 Example：
      // 1. 在当前目录创建一个名为document.txt的符号链接（没有给出dst，直接用src文件名）

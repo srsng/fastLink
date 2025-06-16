@@ -56,10 +56,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         
       - name: Build Release Binary fastlink Full-features
-        run: cargo build --release --features=fastlink_full --bin fastlink --verbose
+        run: cargo build --release --features=fastlink-full --bin fastlink --verbose
 
       - name: Build Release Binary fastlink Slim-features
-        run: cargo build --release --features=fastlink_slim --bin fastlink-slim --verbose
+        run: cargo build --release --features=fastlink-slim --bin fastlink-slim --verbose
         
       # - name: Build Release Binary desks
       #   run: cargo build --release --features=desktop_setter --bin desks --verbose

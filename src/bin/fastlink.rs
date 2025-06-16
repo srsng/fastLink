@@ -18,9 +18,9 @@ fn main() {
 
     // 初始化日志系统
 
-    #[cfg(feature = "save_log")]
+    #[cfg(feature = "save-log")]
     init_log(args.quiet, args.debug, &args.save_log);
-    #[cfg(not(feature = "save_log"))]
+    #[cfg(not(feature = "save-log"))]
     init_log(args.quiet, args.debug);
     log::debug!("{:?}", args);
 
