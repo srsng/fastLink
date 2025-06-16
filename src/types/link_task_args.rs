@@ -247,3 +247,121 @@ impl LinkTaskArgsBuilder {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::args::Args;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_link_task_args_builder_defaults() {
+        let src = String::from("/tmp/source");
+        let args = LinkTaskArgsBuilder::new(src.clone()).build();
+        assert_eq!(args.src, src);
+        assert_eq!(args.dst, None);
+        assert_eq!(args.op_mode, LinkTaskOpMode::Make);
+        assert!(!args.keep_extention);
+        assert!(!args.make_dir);
+        assert!(!args.only_file);
+        assert!(!args.only_dir);
+        assert!(!args.overwrite_links);
+        assert!(!args.overwrite_broken_link);
+        assert!(!args.skip_exist_links);
+        assert!(!args.skip_broken_src_links);
+        assert!(!args.allow_broken_src);
+    }
+
+    #[test]
+    fn test_link_task_args_builder_setters() {
+        let src = String::from("/tmp/source");
+        let dst = String::from("/tmp/dest");
+        let args = LinkTaskArgsBuilder::new(src.clone())
+            .dst(dst.clone())
+            .keep_extention(true)
+            .make_dir(true)
+            .only_file(true)
+            .only_dir(false)
+            .overwrite_links(true)
+            .overwrite_broken_link(true)
+            .skip_exist_links(true)
+            .skip_broken_src_links(true)
+            .build();
+        assert_eq!(args.src, src);
+        assert_eq!(args.dst, Some(dst));
+        assert!(args.keep_extention);
+        assert!(args.make_dir);
+        assert!(args.only_file);
+        assert!(!args.only_dir);
+        assert!(args.overwrite_links);
+        assert!(args.overwrite_broken_link);
+        assert!(args.skip_exist_links);
+        assert!(args.skip_broken_src_links);
+    }
+
+    #[test]
+    fn test_link_task_op_mode_from_args() {
+        let mut args = Args::default();
+        assert_eq!(LinkTaskOpMode::from(&args), LinkTaskOpMode::Make);
+        args.check = true;
+        assert_eq!(LinkTaskOpMode::from(&args), LinkTaskOpMode::Check);
+        args.check = false;
+        args.rm = true;
+        assert_eq!(LinkTaskOpMode::from(&args), LinkTaskOpMode::Remove);
+    }
+
+    #[test]
+    fn test_link_task_args_from_args() {
+        let args = Args {
+            src: String::from("/tmp/source"),
+            dst: Some(String::from("/tmp/dest")),
+            keep_extention: true,
+            make_dir: true,
+            only_file: true,
+            only_dir: false,
+            overwrite_links: true,
+            overwrite_broken_link: true,
+            skip_exist_links: true,
+            skip_broken_src_links: true,
+            allow_broken_src: true,
+            check: false,
+            rm: false,
+            quiet: false,
+            debug: false,
+            #[cfg(feature = "regex")]
+            regex: None,
+            #[cfg(feature = "regex")]
+            re_max_depth: None,
+            #[cfg(feature = "regex")]
+            re_follow_links: false,
+            #[cfg(feature = "regex")]
+            re_no_check: false,
+            #[cfg(feature = "regex")]
+            re_output_flatten: false,
+            #[cfg(feature = "save_log")]
+            save_log: None,
+        };
+        let link_args = LinkTaskArgs::from(&args);
+        assert_eq!(link_args.src, args.src);
+        assert_eq!(link_args.dst, args.dst);
+        assert_eq!(link_args.keep_extention, args.keep_extention);
+        assert_eq!(link_args.make_dir, args.make_dir);
+        assert_eq!(link_args.only_file, args.only_file);
+        assert_eq!(link_args.only_dir, args.only_dir);
+        assert_eq!(link_args.overwrite_links, args.overwrite_links);
+        assert_eq!(link_args.overwrite_broken_link, args.overwrite_broken_link);
+        assert_eq!(link_args.skip_exist_links, args.skip_exist_links);
+        assert_eq!(link_args.skip_broken_src_links, args.skip_broken_src_links);
+        assert_eq!(link_args.allow_broken_src, args.allow_broken_src);
+    }
+
+    #[test]
+    fn test_tempfile_usage_for_src() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("file.txt");
+        std::fs::write(&file_path, b"test").unwrap();
+        let src = file_path.to_str().unwrap().to_string();
+        let args = LinkTaskArgsBuilder::new(src.clone()).build();
+        assert_eq!(args.src, src);
+    }
+}

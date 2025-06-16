@@ -190,6 +190,42 @@ pub struct Args {
     pub allow_broken_src: bool,
 }
 
+/// 仅用于测试的Default实现
+#[cfg(test)]
+impl Default for Args {
+    fn default() -> Self {
+        Args {
+            src: String::new(),
+            dst: None,
+            check: false,
+            rm: false,
+            keep_extention: false,
+            make_dir: false,
+            quiet: false,
+            debug: false,
+            #[cfg(feature = "regex")]
+            regex: None,
+            #[cfg(feature = "regex")]
+            re_max_depth: None,
+            only_file: false,
+            only_dir: false,
+            #[cfg(feature = "regex")]
+            re_follow_links: false,
+            #[cfg(feature = "regex")]
+            re_no_check: false,
+            #[cfg(feature = "regex")]
+            re_output_flatten: false,
+            overwrite_links: false,
+            overwrite_broken_link: true,
+            skip_exist_links: false,
+            skip_broken_src_links: true,
+            #[cfg(feature = "save_log")]
+            save_log: None,
+            allow_broken_src: false,
+        }
+    }
+}
+
 /// 检查src
 fn validate_src(s: &str) -> Result<String, String> {
     let path = std::path::Path::new(s).clean();
