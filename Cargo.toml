@@ -52,10 +52,10 @@ path = "src/bin/desktop_setter.rs"
 required-features = ["desktop_setter"]
 
 [features]
-# default = []
+default = []
 # default = ["fastlink_slim"]
 # default = ["fastlink_full"]
-default = ["desktop_setter"]
+# default = ["desktop_setter"]
 
 # 正则表达式支持
 regex = ["dep:regex", "walkdir"]
@@ -66,4 +66,4 @@ fastlink_full = ["regex", "save_log"]
 # slim版
 fastlink_slim = []
 # 其他bin
-desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell", "windows"]
+desktop_setter = ["winreg", "serde", "serde_json", "dirs", "once_cell", "dep:windows"]

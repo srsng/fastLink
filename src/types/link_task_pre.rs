@@ -148,19 +148,24 @@ fn process_extension(src: &Path, mut dst: PathBuf) -> PathBuf {
 
 /// 由src名称生成默认dst名称, 携带后缀
 fn default_dst_name(src: &Path, log: bool) -> PathBuf {
-    let base_name = 
-    // if src.is_file() {
+    let base_name = src.file_name().unwrap_or_else(|| {
+        log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
+        OsStr::new("unnamed-fastlink")
+    });
+
+    // 另一个实现：生成默认dst名称, 文件不会携带后缀，文件夹会
+    // let base_name = if src.is_file() {
     //     src.file_stem().unwrap_or_else(|| {
     //         log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
     //         OsStr::new("unnamed-fastlink")
     //     })
     // } else
-     {
-        src.file_name().unwrap_or_else(|| {
-            log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
-            OsStr::new("unnamed-fastlink")
-        })
-    };
+    //  {
+    //     src.file_name().unwrap_or_else(|| {
+    //         log::warn!("无法解析src名称，已设置dst名称为unnamed-fastlink");
+    //         OsStr::new("unnamed-fastlink")
+    //     })
+    // };
 
     if log {
         // 输出日志信息
@@ -185,7 +190,7 @@ fn default_dst_name(src: &Path, log: bool) -> PathBuf {
 pub fn validate_dst(task_args: &LinkTaskArgs, dst: &Path) -> Result<PathBuf, MyError> {
     log::debug!("validate_dst/dst: {}", dst.display());
 
-    let dst_parent_option = dst.parent();    
+    let dst_parent_option = dst.parent();
     // 参数--md不为true时，若dst父目录不存在，或其本身是目录且不存在，则报错返回
     handle_validate_dst_parent_not_exist(task_args.make_dir, dst_parent_option)?;
     // 接下来保证dst_parent存在
@@ -195,24 +200,24 @@ pub fn validate_dst(task_args: &LinkTaskArgs, dst: &Path) -> Result<PathBuf, MyE
 }
 
 /// 规范化dst路径
-fn canonicalize_dst(dst: &Path) -> Result<PathBuf, MyError>  {
+fn canonicalize_dst(dst: &Path) -> Result<PathBuf, MyError> {
     let dst_name = dst.file_name().unwrap_or_else(|| {
-            log::warn!("无法解析dst名称，已设置dst名称为unnamed-fastlink");
-            OsStr::new("unnamed-fastlink")
-    });  
+        log::warn!("无法解析dst名称，已设置dst名称为unnamed-fastlink");
+        OsStr::new("unnamed-fastlink")
+    });
     let dst_parent = dst.parent().unwrap();
     // 规范化
     let dst_parent = dst.parent().unwrap().canonicalize().map_err(|e| {
         MyError::new(
             ErrorCode::IoError,
-            format!("规范化dst父目录时出错: {} {e}", dst_parent.display())
+            format!("规范化dst父目录时出错: {} {e}", dst_parent.display()),
         )
     })?;
-    let dst_path =  dst_parent.join(dst_name);
+    let dst_path = dst_parent.join(dst_name);
     Ok(dst_path)
 }
 
-/// validate_dst函数辅助函数，为dst创建父目录, 
+/// validate_dst函数辅助函数，为dst创建父目录,
 /// 参数--md不为true时，若dst父目录不存在，则报错
 fn handle_validate_dst_parent_not_exist(
     make_dir: bool,
@@ -272,7 +277,6 @@ pub fn handle_mklink_pre_check_error_for_src(res: Result<(), MyError>) -> Result
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
