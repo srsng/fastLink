@@ -150,10 +150,12 @@ impl LinkTask {
 
     #[cfg(feature = "regex")]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
-        self.apply_re(None)?;
         match &self.args.re_pattern {
-            Some(_) => self._mklinks_re(),
             None => self._mklink(),
+            Some(_) => {
+                self.apply_re(None)?;
+                self._mklinks_re()
+            }
         }
     }
 
@@ -169,10 +171,19 @@ impl LinkTask {
         }
 
         if let Some(paths) = self.matched_paths.as_ref() {
-            // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
-            // 返回Ok(false)则取消创建
-            if !crate::utils::func::display_paginated_paths(paths, 10, self.args.re_no_check)? {
-                return Ok(());
+            // src输入是文件时
+            if self.src_path.is_file() {
+                log::info!(
+                    "\n\tsrc: {}\n\tdst: {}",
+                    self.src_path.display(),
+                    self.dst_path.display()
+                );
+            } else {
+                // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
+                // 返回Ok(false)则取消创建
+                if !crate::utils::func::display_paginated_paths(paths, 10, self.args.re_no_check)? {
+                    return Ok(());
+                }
             }
 
             // 批量创建所有需要的目录
