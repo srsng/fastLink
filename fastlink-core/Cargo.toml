@@ -1,0 +1,36 @@
+[package]
+name = "fastlink-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["srsnng"]
+description = "fastlink 项目的核心库，包含通用类型与工具函数"
+license = "Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+chrono = "0.4.41"
+clap = { version = "4.5.40", features = ["derive"] }
+dunce = "1.0.5"
+env_logger = { version = "0.11.8" }
+lazy_static = "1.5.0"
+log = "0.4.27"
+path-clean = "1.0.1"
+strip-ansi-escapes = { version = "0.2.1", optional = true }
+walkdir = { version = "2.5.0", optional = true }
+
+[dependencies.regex]
+version = "1.11.1"
+optional = true
+default-features = false
+features = ["std", "perf", "unicode"]
+
+[dev-dependencies]
+tempfile = "3.20.0"
+
+[features]
+default = []
+
+save-log = ["dep:strip-ansi-escapes"]
+fastlink-regex = ["dep:regex", "dep:walkdir"]

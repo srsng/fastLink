@@ -1,39 +1,10 @@
-[package]
-authors = ["srsnng"]
-name = "fastlink"
-version = "0.11.4"
-edition = "2021"
-license = "Apache-2.0"
-
-[dependencies]
-chrono = "0.4.41"
-clap = { version = "4.5.40", features = ["derive"] }
-dirs = { version = "6.0.0", optional = true }
-dunce = "1.0.5"
-env_logger = { version = "0.11.8" }
-lazy_static = "1.5.0"
-log = "0.4.27"
-once_cell = { version = "1.21.3", optional = true }
-path-clean = "1.0.1"
-serde = { version = "1.0.219", optional = true, features = ["derive"] }
-serde_json = { version = "1.0.140", optional = true }
-strip-ansi-escapes = { version = "0.2.1", optional = true }
-walkdir = { version = "2.5.0", optional = true }
-winreg = { version = "0.55.0", optional = true }
-
-[dependencies.windows]
-version = "0.52.0"
-optional = true
-features = ["Win32_UI_Shell", "Win32_Foundation"]
-
-[dependencies.regex]
-version = "1.11.1"
-optional = true
-default-features = false
-features = ["std", "perf", "unicode"]
-
-[dev-dependencies]
-tempfile = "3.20.0"
+[workspace]
+resolver = "2"
+members = [
+    "fastlink-core",
+    "fastlink-cli",
+    "desks-cli"
+]
 
 [profile.release]
 opt-level = 3
@@ -45,43 +16,3 @@ overflow-checks = false
 lto = "fat"
 panic = "abort"
 incremental = false
-
-[[bin]]
-name = "fastlink"
-path = "src/bin/fastlink.rs"
-required-features = ["fastlink-full"]
-
-[[bin]]
-name = "fastlink-slim"
-path = "src/bin/fastlink.rs"
-required-features = ["fastlink-slim"]
-
-[[bin]]
-name = "desks"
-path = "src/bin/desktop_setter.rs"
-required-features = ["desktop-setter"]
-
-[features]
-default = []
-# default = ["fastlink-slim"]
-# default = ["fastlink-full"]
-# default = ["desktop-setter"]
-
-# fastlink 正则表达式支持
-fatlink-regex = ["dep:regex", "dep:walkdir"]
-# 保存日志
-save-log = ["dep:strip-ansi-escapes"]
-
-# 完整版，包含所有功能
-"fastlink-full" = ["fatlink-regex", "save-log"]
-# slim版
-"fastlink-slim" = []
-# 其他bin
-desktop-setter = [
-    "dep:winreg",
-    "dep:serde",
-    "dep:serde_json",
-    "dep:dirs",
-    "dep:once_cell",
-    "dep:windows",
-]

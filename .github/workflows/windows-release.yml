@@ -54,19 +54,24 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        
-      - name: Build Release Binary fastlink Full-features
-        run: cargo build --release --features=fastlink-full --bin fastlink --verbose
 
-      - name: Build Release Binary fastlink Slim-features
-        run: cargo build --release --features=fastlink-slim --bin fastlink-slim --verbose
-        
-      # - name: Build Release Binary desks
-      #   run: cargo build --release --features=desktop_setter --bin desks --verbose
+      - name: Build Release Binary desku
+        run: cargo build --release --bin desku --features=only-usual
+
+      - name: Build Release Binary desks
+        run: cargo build --release --bin desks
+
+      - name: Build Release Binary fastlink-slim
+        run: cargo build --release --features=fastlink-slim --bin fastlink-slim
+
+      - name: Build Release Binary fastlink
+        run: cargo build --release --features=fastlink-full --bin fastlink
+
   
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: target/release/*.exe
+          files: target/release/fastlink*.exe
+          files: target/release/desk*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

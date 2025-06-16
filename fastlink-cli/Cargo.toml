@@ -1,0 +1,47 @@
+[package]
+name = "fastlink-cli"
+version = "0.12.0"
+edition = "2021"
+authors = ["srsnng"]
+license = "Apache-2.0"
+
+[dependencies]
+fastlink-core = { path = "../fastlink-core" }
+clap = { version = "4.5.40", features = ["derive"] }
+env_logger = "0.11.8"
+log = "0.4.27"
+path-clean = "1.0.1"
+walkdir = { version = "2.5.0", optional = true }
+
+[dependencies.regex]
+version = "1.11.1"
+optional = true
+default-features = false
+features = ["std", "perf", "unicode"]
+
+[dev-dependencies]
+tempfile = "3.20.0"
+
+[[bin]]
+name = "fastlink"
+path = "src/main.rs"
+required-features = ["fastlink-full"]
+
+[[bin]]
+name = "fastlink-slim"
+path = "src/main_slim.rs"
+required-features = ["fastlink-slim"]
+
+[features]
+default = ["fastlink-slim"]
+# default = ["fastlink-full"]
+
+# fastlink 正则表达式支持
+fastlink-regex = ["fastlink-core/fastlink-regex", "dep:regex"]
+# 保存日志
+save-log = ["fastlink-core/save-log"]
+
+# slim版
+fastlink-slim = []
+# 完整版，包含所有功能
+fastlink-full = ["fastlink-regex", "save-log"]
