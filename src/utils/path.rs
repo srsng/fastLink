@@ -3,19 +3,11 @@ use path_clean::PathClean;
 use std::path::{Path, PathBuf};
 
 /// 路径规范化
-pub fn canonicalize_path(path: &Path) -> Result<PathBuf, MyError> {
+pub fn canonicalize_path(path: &Path) -> PathBuf {
     if path.is_absolute() {
-        Ok(path.to_path_buf().clean())
+        path.to_path_buf().clean()
     } else {
-        // let curdir = std::env::current_dir();
-        // match curdir {
-        //     Ok(curdir) => Ok(curdir.join(path.clean())),
-        //     Err(e) => Err(MyError::new(
-        //         ErrorCode::Unknown,
-        //         format!("Failed to get current directory: {}", e),
-        //     )),
-        // }
-        Ok(crate::WORK_DIR.join(path.clean()))
+        crate::WORK_DIR.join(path.clean())
     }
 }
 

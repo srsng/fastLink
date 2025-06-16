@@ -75,8 +75,10 @@ pub struct Args {
     #[arg(long)]
     pub rm: bool,
 
-    /// 自动保留<SRC>的文件拓展名到[DST]。(不会去除)
+    /// *追加*<SRC>的文件拓展名到[DST]，不会去除/替换
     /// 保留拓展名之后可以通过对符号链接双击、运行等操作让系统使用默认应用打开或执行。
+    ///
+    /// src:".jpg", dst: ".jpg" -> dst: ".jpg"; src:".jpg", dst: ".temp" -> dst: ".jpg.temp"
     #[arg(short, long)]
     pub keep_extention: bool,
 
