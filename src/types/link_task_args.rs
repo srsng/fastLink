@@ -5,11 +5,11 @@ pub struct LinkTaskArgs {
     pub src: String,         // 原始源路径
     pub dst: Option<String>, // 原始目标路径
     pub op_mode: LinkTaskOpMode,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub re_pattern: Option<regex::Regex>, // 正则表达式模式
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub re_max_depth: usize, // 正则表达式模式最大深度
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub re_follow_links: bool, // re匹配过程中深入读取符号链接进行匹配
     pub keep_extention: bool,        // 是否自动保留<SRC>的文件拓展名到[DST]
     pub make_dir: bool,              // 是否自动创建不存在的目录
@@ -19,9 +19,9 @@ pub struct LinkTaskArgs {
     pub overwrite_broken_link: bool, // 覆盖同名已存在的损坏的符号链接
     pub skip_exist_links: bool,      // 跳过同名已存在的符号链接
     pub skip_broken_src_links: bool, // 跳过src中损坏的符号链接
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub re_no_check: bool, // 跳过用户Re检查
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub re_output_flatten: bool, // 展平输出路径
     pub allow_broken_src: bool,
 }
@@ -57,13 +57,13 @@ impl From<&Args> for LinkTaskArgs {
             src: args.src.clone(),
             dst: args.dst.clone(),
             op_mode: LinkTaskOpMode::from(args),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_pattern: args.regex.clone(),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_max_depth: args
                 .re_max_depth
                 .unwrap_or(crate::types::args::DEFAULT_RE_MAX_DEPTH),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_follow_links: args.re_follow_links,
             keep_extention: args.keep_extention,
             make_dir: args.make_dir,
@@ -73,9 +73,9 @@ impl From<&Args> for LinkTaskArgs {
             overwrite_broken_link: args.overwrite_broken_link,
             skip_exist_links: args.skip_exist_links,
             skip_broken_src_links: args.skip_broken_src_links,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_no_check: args.re_no_check,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_output_flatten: args.re_output_flatten,
             allow_broken_src: args.allow_broken_src,
         }
@@ -88,11 +88,11 @@ pub struct LinkTaskArgsBuilder {
     src: String,
     dst: Option<String>,
     op_mode: Option<LinkTaskOpMode>,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     re_pattern: Option<regex::Regex>,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     re_max_depth: Option<usize>,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     re_follow_links: Option<bool>,
     keep_extention: Option<bool>,
     make_dir: Option<bool>,
@@ -102,14 +102,14 @@ pub struct LinkTaskArgsBuilder {
     overwrite_broken_link: Option<bool>,
     skip_exist_links: Option<bool>,
     skip_broken_src_links: Option<bool>,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     re_no_check: Option<bool>,
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     re_output_flatten: Option<bool>,
     allow_broken_src: Option<bool>,
 }
 
-// #[cfg(feature = "regex")]
+// #[cfg(feature = "fatlink_regex")]
 // pub struct ReArgs {
 //     re_pattern: regex::Regex,        // 正则表达式模式
 //     re_max_depth: Option<usize>,     // 正则表达式模式最大深度
@@ -118,7 +118,7 @@ pub struct LinkTaskArgsBuilder {
 //     re_output_flatten: Option<bool>, // 展平输出路径
 // }
 
-// #[cfg(feature = "regex")]
+// #[cfg(feature = "fatlink_regex")]
 // impl ReArgs {
 //     pub fn new(
 //         pattern: regex::Regex,
@@ -154,13 +154,13 @@ impl LinkTaskArgsBuilder {
             src: self.src,
             dst: self.dst,
             op_mode: self.op_mode.unwrap_or_default(),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_pattern: self.re_pattern,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_max_depth: self
                 .re_max_depth
                 .unwrap_or(crate::types::args::DEFAULT_RE_MAX_DEPTH),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_follow_links: self.re_follow_links.unwrap_or(false),
             keep_extention: self.keep_extention.unwrap_or(false),
             make_dir: self.make_dir.unwrap_or(false),
@@ -170,9 +170,9 @@ impl LinkTaskArgsBuilder {
             overwrite_broken_link: self.overwrite_broken_link.unwrap_or(false),
             skip_exist_links: self.skip_exist_links.unwrap_or(false),
             skip_broken_src_links: self.skip_broken_src_links.unwrap_or(false),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_no_check: self.re_no_check.unwrap_or(false),
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_output_flatten: self.re_output_flatten.unwrap_or(false),
             allow_broken_src: self.allow_broken_src.unwrap_or(false),
         }
@@ -183,13 +183,13 @@ impl LinkTaskArgsBuilder {
         self
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub fn re_pattern(mut self, value: regex::Regex) -> Self {
         self.re_pattern = Some(value);
         self
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub fn re_max_depth(mut self, value: usize) -> Self {
         self.re_max_depth = Some(value);
         self
@@ -235,13 +235,13 @@ impl LinkTaskArgsBuilder {
         self
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub fn re_no_check(mut self, value: bool) -> Self {
         self.re_no_check = Some(value);
         self
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub fn re_output_flatten(mut self, value: bool) -> Self {
         self.re_output_flatten = Some(value);
         self
@@ -328,15 +328,15 @@ mod tests {
             rm: false,
             quiet: false,
             debug: false,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             regex: None,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_max_depth: None,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_follow_links: false,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_no_check: false,
-            #[cfg(feature = "regex")]
+            #[cfg(feature = "fatlink_regex")]
             re_output_flatten: false,
             #[cfg(feature = "save_log")]
             save_log: None,

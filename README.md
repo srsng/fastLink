@@ -12,7 +12,7 @@ slim-version does not support Regex or save log to file or some other features.
 
 ![example](image/README/example.png)
 
-## Usage (not up to date yet)
+## Usage (v0.11.4)
 ```cmd
 
 Usage: fastlink.exe [OPTIONS] <SRC> [DST]

@@ -10,10 +10,10 @@ use std::io;
 #[cfg(feature = "save_log")]
 use std::path::PathBuf;
 
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 // 设置文件颜色（绿色）
 pub const FILE_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(19, 161, 14))));
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 // 设置父目录颜色（灰色）
 pub const PARENT_STYLE: Style = Style::new().fg_color(Some(Color::Rgb(RgbColor(150, 150, 150))));
 

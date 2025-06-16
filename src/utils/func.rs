@@ -1,14 +1,14 @@
 use crate::types::err::{ErrorCode, MyError};
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 use crate::utils::logs::{FILE_STYLE, PARENT_STYLE};
 use std::path::Path;
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 use std::{
     io::{self, Write},
     path::PathBuf,
 };
 
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 const MAIN_SEPARATOR: char = std::path::MAIN_SEPARATOR;
 
 /// 创建symlink的前置检查，包含path：
@@ -60,7 +60,7 @@ pub fn mklink_pre_check(path: &Path) -> Result<(), MyError> {
     }
 }
 
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 /// 用于Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
 pub fn display_paginated_paths(
     paths: &[(PathBuf, PathBuf)],
@@ -150,7 +150,7 @@ pub fn display_paginated_paths(
     }
 }
 
-#[cfg(feature = "regex")]
+#[cfg(feature = "fatlink_regex")]
 /// 格式化匹配的路径对
 pub fn format_matched_paths(paths: &[(PathBuf, PathBuf)]) -> String {
     paths

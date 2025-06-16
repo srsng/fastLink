@@ -15,7 +15,6 @@ lazy_static = "1.5.0"
 log = "0.4.27"
 once_cell = { version = "1.21.3", optional = true }
 path-clean = "1.0.1"
-regex = { version = "1.11.1", optional = true }
 serde = { version = "1.0.219", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.140", optional = true }
 strip-ansi-escapes = { version = "0.2.1", optional = true }
@@ -23,9 +22,15 @@ walkdir = { version = "2.5.0", optional = true }
 winreg = { version = "0.55.0", optional = true }
 
 [dependencies.windows]
- version = "0.52.0"
- features = ["Win32_UI_Shell", "Win32_Foundation"] 
- optional = true
+version = "0.52.0"
+optional = true
+features = ["Win32_UI_Shell", "Win32_Foundation"] 
+
+[dependencies.regex]
+version = "1.11.1"
+optional = true
+default-features = false
+features = ["std", "perf", "unicode"]
 
 [dev-dependencies]
 tempfile = "3.20.0"
@@ -57,12 +62,12 @@ default = []
 # default = ["fastlink_full"]
 # default = ["desktop_setter"]
 
-# 正则表达式支持
-regex = ["dep:regex", "walkdir"]
+# fastlink 正则表达式支持
+fatlink_regex = ["regex", "walkdir"]
 save_log = ["strip-ansi-escapes"]
 
 # 完整版，包含所有功能
-fastlink_full = ["regex", "save_log"]
+fastlink_full = ["fatlink_regex", "save_log"]
 # slim版
 fastlink_slim = []
 # 其他bin

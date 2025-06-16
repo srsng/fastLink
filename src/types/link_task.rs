@@ -43,12 +43,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "regex"))]
+    #[cfg(not(feature = "fatlink_regex"))]
     fn remove_links_with_dst(self) -> MyResult<()> {
         del_exists_link(&self.dst_path, true, Some(false)).map(self.remove_links_log())
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     fn remove_links_with_dst(mut self) -> MyResult<()> {
         if self.args.re_pattern.is_some() {
             self.apply_re(None)?;
@@ -87,7 +87,7 @@ impl LinkTask {
         }
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     fn remove_links_summary_log(self, skip: Vec<PathBuf>, errs: Vec<MyError>) {
         log::info!(
             "删除完成：{}条成功，{}条跳过，{}条失败",
@@ -115,12 +115,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "regex"))]
+    #[cfg(not(feature = "fatlink_regex"))]
     fn check_links_with_dst(self) -> MyResult<()> {
         check_link(&self.dst_path)
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     fn check_links_with_dst(mut self) -> MyResult<()> {
         if self.args.re_pattern.is_some() {
             self.apply_re(None)?;
@@ -143,12 +143,12 @@ impl LinkTask {
         }
     }
 
-    #[cfg(not(feature = "regex"))]
+    #[cfg(not(feature = "fatlink_regex"))]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         self._mklink()
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     pub fn mklinks(&mut self) -> Result<(), MyError> {
         match &self.args.re_pattern {
             None => self._mklink(),
@@ -159,7 +159,7 @@ impl LinkTask {
         }
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     fn _mklinks_re(&self) -> Result<(), MyError> {
         if self
             .matched_paths
@@ -264,30 +264,23 @@ impl LinkTask {
         Ok(())
     }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     /// 包装apply_re相关逻辑，通过_apply_re完成应用re检查，修改matched_paths, dirs_to_create
     pub fn apply_re(&mut self, force: Option<bool>) -> Result<(), MyError> {
         // todo 优化regex Option检查
         if self.matched_paths.is_none() || force.unwrap_or(false) {
             self._apply_re()?;
         }
-        // log::debug!("{:?}", self.matched_paths);
-        // if let Some(paths) = self.matched_paths.as_mut() {
-        //     if paths[0] == (PathBuf::new(), PathBuf::new()) {
-        //         paths.remove(0);
-        //         log::warn!("经过re匹配后的路径对包含src与dst，已排除");
-        //     }
-        // }
         Ok(())
     }
 
-    // #[cfg(not(feature = "regex"))]
+    // #[cfg(not(feature = "fatlink_regex"))]
     // /// 为了统一函数调用的非regex特性下的apply_re，空操作且不需要可变借用
     // pub fn apply_re(&self, _force: Option<bool>) -> Result<(), MyError> {
     //     Ok(())
     // }
 
-    #[cfg(feature = "regex")]
+    #[cfg(feature = "fatlink_regex")]
     /// 应用re检查，更新 matched_paths 和 dirs_to_create
     /// 使用了参数only_file， only_dir， re_output_flatten
     fn _apply_re(&mut self) -> Result<(), MyError> {
@@ -383,18 +376,12 @@ impl LinkTask {
                                 .or_default()
                                 .push(path.to_path_buf());
                         }
-                        // else if self.args.make_dir {
-                        // 非最深层目录，创建文件夹
-                        // log::debug!("is dir={} : {}", is_dir, path.display());
-                        // dirs_to_create.insert(target_path.clone());
-                        // }
                     }
                 }
             }
         }
 
         dirs_to_create.remove(&PathBuf::new());
-        // log::debug!("dirs_to_create {:?}", dirs_to_create);
 
         // 将最深层目录的符号链接添加到 matched_paths
         matched_paths.extend(matched_paths_dir);
@@ -508,178 +495,3 @@ fn check_link(src: &Path) -> MyResult<()> {
     };
     Ok(())
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use tempfile::TempDir;
-
-//     #[test]
-//     fn test_validate_dst() {
-//         let temp_dir = TempDir::new().unwrap();
-//         let base_path = temp_dir.path();
-
-//         // 父目录存在的情况
-//         let existing_path = base_path.join("existing_dir");
-//         fs::create_dir(&existing_path).unwrap();
-//         let test_path = existing_path.join("test.txt");
-//         assert!(validate_dst(&test_path, true).is_ok());
-
-//         // 需要创建父目录的情况
-//         let new_path = base_path.join("new_dir/test.txt");
-//         let result = validate_dst(&new_path, true);
-//         assert!(result.is_ok());
-//         assert!(new_path.parent().unwrap().exists());
-
-//         // // 无法创建父目录的情况（例如无权限路径）
-//         // #[cfg(windows)]
-//         // let invalid_path = Path::new("C:\\Windows\\System32\\test\\test.txt");
-//         // #[cfg(not(windows))]
-//         // let invalid_path = Path::new("/root/test/test.txt");
-//         // assert!(validate_dst(invalid_path, true).is_err());
-//     }
-
-//     #[test]
-//     fn test_process_extension() {
-//         let mut path = PathBuf::from("test");
-//         let src_file = Path::new("source.txt");
-//         let src_dir = Path::new("source_dir");
-
-//         // 保留扩展名（文件）
-//         process_extension(src_file, &mut path, true);
-//         assert_eq!(path, PathBuf::from("test.txt"));
-
-//         // 不保留扩展名
-//         path.set_file_name("test");
-//         process_extension(src_file, &mut path, false);
-//         assert_eq!(path, PathBuf::from("test"));
-
-//         // 目录应忽略扩展名
-//         let mut dir_path = PathBuf::from("dir/");
-//         process_extension(src_file, &mut dir_path, true);
-//         assert_eq!(dir_path, PathBuf::from("dir/"));
-
-//         // 源没有扩展名
-//         let mut path = PathBuf::from("test");
-//         process_extension(src_dir, &mut path, true);
-//         assert_eq!(path, PathBuf::from("test"));
-//     }
-
-//     #[test]
-//     fn test_default_dst_path() {
-//         let dir_abs = Path::new(r"C:\Windows\System32");
-//         let dir_rel = Path::new(r"System32");
-//         let dir_rel2 = Path::new(r"\Windows\System32");
-//         let dir_rel3 = Path::new(r"..\System32");
-
-//         assert_eq!(PathBuf::from("System32"), default_dst_path(dir_abs));
-//         assert_eq!(PathBuf::from("System32"), default_dst_path(dir_rel));
-//         assert_eq!(PathBuf::from("System32"), default_dst_path(dir_rel2));
-//         assert_eq!(PathBuf::from("System32"), default_dst_path(dir_rel3));
-
-//         let file_abs = Path::new(r"C:\Windows\System32\notepad.exe");
-//         let file_rel = Path::new(r"notepad.exe");
-//         let file_rel2 = Path::new(r"System32\notepad.exe");
-//         let file_rel3 = Path::new(r"..\notepad.exe");
-//         assert_eq!(PathBuf::from("notepad"), default_dst_path(file_abs));
-//         assert_eq!(PathBuf::from("notepad"), default_dst_path(file_rel));
-//         assert_eq!(PathBuf::from("notepad"), default_dst_path(file_rel2));
-//         assert_eq!(PathBuf::from("notepad"), default_dst_path(file_rel3));
-
-//         assert_eq!(
-//             PathBuf::from("unnamed-fastlink"),
-//             default_dst_path(Path::new(""))
-//         );
-//     }
-
-//     #[test]
-//     fn test_parse_args_dst() {
-//         let dir_abs = r"C:\Windows\System32";
-//         let dir_rel = r"System32";
-
-//         let file_abs = r"C:\Windows\System32\notepad.exe";
-//         let file_rel = r"notepad.exe";
-//         // block: dst is None
-//         {
-//             let dir_tar = PathBuf::from("System32");
-//             let file_tar_k_t = PathBuf::from("notepad.exe");
-//             let file_tar_k_f = PathBuf::from("notepad");
-
-//             // keep_extention true
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, None, true));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, None, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_abs, None, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_rel, None, true));
-//             // no keep_extention false
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, None, false));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, None, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_abs, None, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_rel, None, false));
-//         }
-
-//         // block: dst not None, relative path
-//         {
-//             let some_dst = Some(r"..\some_name");
-//             let cur_path = std::env::current_dir().expect("Failed to get current directory");
-
-//             let dir_tar = cur_path.join(PathBuf::from(r"..\some_name"));
-//             let file_tar_k_t = cur_path.join(PathBuf::from(r"..\some_name.exe"));
-//             let file_tar_k_f = cur_path.join(PathBuf::from(r"..\some_name"));
-
-//             // keep_extention true
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, some_dst, true));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, some_dst, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_abs, some_dst, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_rel, some_dst, true));
-//             // no keep_extention false
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, some_dst, false));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, some_dst, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_abs, some_dst, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_rel, some_dst, false));
-//         }
-//         // block: dst not None, absolute path
-//         {
-//             let some_dst = Some(r"C:\some_name");
-
-//             let dir_tar = PathBuf::from(r"C:\some_name");
-//             let file_tar_k_t = PathBuf::from(r"C:\some_name.exe");
-//             let file_tar_k_f = PathBuf::from(r"C:\some_name");
-
-//             // keep_extention true
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, some_dst, true));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, some_dst, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_abs, some_dst, true));
-//             assert_eq!(file_tar_k_t, parse_args_dst(file_rel, some_dst, true));
-//             // no keep_extention false
-//             assert_eq!(dir_tar, parse_args_dst(dir_abs, some_dst, false));
-//             assert_eq!(dir_tar, parse_args_dst(dir_rel, some_dst, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_abs, some_dst, false));
-//             assert_eq!(file_tar_k_f, parse_args_dst(file_rel, some_dst, false));
-//         }
-//     }
-
-//     #[test]
-//     fn test_create_symlink() {
-//         let temp_dir = TempDir::new().unwrap();
-//         let src_file = temp_dir.path().join("source.txt");
-//         let src_dir = temp_dir.path().join("source_dir");
-//         let dst_file = temp_dir.path().join("link.txt");
-//         let dst_dir = temp_dir.path().join("link_dir");
-
-//         // 创建测试文件/目录
-//         fs::write(&src_file, "fastlink test").unwrap();
-//         fs::create_dir(&src_dir).unwrap();
-
-//         // 测试文件符号链接
-//         assert!(create_symlink(&src_file, &dst_file).is_ok());
-//         assert!(dst_file.exists());
-
-//         // 测试目录符号链接
-//         assert!(create_symlink(&src_dir, &dst_dir).is_ok());
-//         assert!(dst_dir.exists());
-
-//         // 清理
-//         fs::remove_file(dst_file).unwrap();
-//         fs::remove_dir(dst_dir).unwrap();
-//     }
-// }
