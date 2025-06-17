@@ -5,6 +5,7 @@ members = [
     "fastlink-cli",
     "desks-core",
     "desks-cli",
+    "desks-tray"
 ]
 
 [profile.release]
