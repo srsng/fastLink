@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "fastlink-core",
     "fastlink-cli",
-    "desks-cli"
+    "desks-core",
+    "desks-cli",
 ]
 
 [profile.release]

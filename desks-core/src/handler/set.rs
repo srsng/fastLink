@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    handler::fresh::handle_fresh_desktop, types::state::DESKTOP_STATE, utils::rollback::Transaction,
+    handler::fresh::handle_fresh_desktop, state::DESKTOP_STATE, utils::rollback::Transaction,
 };
 use crate::{ErrorCode, MyError, MyResult};
 use fastlink_core::utils::fs::mk_parents;

@@ -1,4 +1,4 @@
-use crate::types::state::DESKTOP_STATE;
+use crate::state::DESKTOP_STATE;
 use crate::utils::func::{get_dir_temp, get_original_desktop_path};
 use crate::utils::rollback::Transaction;
 use crate::{ErrorCode, MyError, MyResult};

@@ -180,6 +180,23 @@ name = "desks"
 version = "0.2.0"
 dependencies = [
  "clap",
+ "desks-core",
+ "dirs",
+ "fastlink-core",
+ "lazy_static",
+ "log",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "windows",
+ "winreg",
+]
+
+[[package]]
+name = "desks-core"
+version = "0.1.0"
+dependencies = [
+ "clap",
  "dirs",
  "fastlink-core",
  "lazy_static",

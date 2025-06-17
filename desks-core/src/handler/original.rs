@@ -1,5 +1,5 @@
 use crate::handler::set::handle_desktop_set;
-use crate::types::state::DESKTOP_STATE;
+use crate::state::DESKTOP_STATE;
 use crate::MyResult;
 
 pub fn handle_desktop_origin() -> MyResult<()> {

@@ -1,4 +1,4 @@
-use crate::types::state::DESKTOP_STATE;
+use crate::state::DESKTOP_STATE;
 use crate::MyResult;
 
 pub fn handle_desktop_state() -> MyResult<()> {

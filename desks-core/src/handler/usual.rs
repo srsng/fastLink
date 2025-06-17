@@ -1,6 +1,6 @@
 use crate::{
     handler::{set::handle_desktop_set, state::handle_desktop_state},
-    types::state::DESKTOP_STATE,
+    state::DESKTOP_STATE,
 };
 use crate::{ErrorCode, MyError, MyResult};
 

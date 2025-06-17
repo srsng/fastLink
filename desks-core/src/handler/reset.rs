@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{types::state::DESKTOP_STATE, utils::rollback::Transaction};
+use crate::{state::DESKTOP_STATE, utils::rollback::Transaction};
 use crate::{ErrorCode, MyError, MyResult};
 use fastlink_core::utils::path::get_path_type;
 

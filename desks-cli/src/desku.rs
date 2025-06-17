@@ -1,12 +1,10 @@
 /// desks简化版本，将只能用于设定已有的快速名称
-pub mod handler;
 pub mod types;
-pub mod utils;
 
-use crate::handler::usual::handle_desktop_usual;
 use crate::types::args::Args;
-use crate::types::state::DESKTOP_STATE;
 use clap::Parser;
+use desks_core::handler::usual::handle_desktop_usual;
+use desks_core::state::DESKTOP_STATE;
 pub use fastlink_core::types::err::{ErrorCode, MyError, MyResult};
 
 fn main() {

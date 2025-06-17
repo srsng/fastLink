@@ -1,15 +1,13 @@
-pub mod handler;
 pub mod types;
-pub mod utils;
 
-use crate::handler::{
+use crate::types::args::Args;
+use crate::types::commands::Commands;
+use clap::Parser;
+use desks_core::handler::{
     init::handle_desktop_init, original::handle_desktop_origin, reset::handle_desktop_reset,
     set::handle_desktop_set, state::handle_desktop_state, usual::handle_desktop_usual,
 };
-use crate::types::args::Args;
-use crate::types::commands::Commands;
-use crate::types::state::DESKTOP_STATE;
-use clap::Parser;
+use desks_core::state::DESKTOP_STATE;
 pub use fastlink_core::types::err::{ErrorCode, MyError, MyResult};
 
 fn main() {

@@ -1,13 +1,15 @@
 [package]
-name = "desks"
-version = "0.2.0"
+name = "desks-core"
+version = "0.1.0"
 edition = "2021"
 authors = ["srsnng"]
 license = "Apache-2.0"
 
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 fastlink-core = { path = "../fastlink-core", features = [] }
-desks-core = { path = "../desks-core", features = [] }
 log = "0.4.27"
 clap = { version = "4.5.40", features = ["derive"] }
 dirs = { version = "6.0.0" }
@@ -21,17 +23,3 @@ winreg = { version = "0.55.0" }
 version = "0.52.0"
 features = ["Win32_UI_Shell", "Win32_Foundation"]
 
-[[bin]]
-name = "desks"
-path = "src/main.rs"
-
-[[bin]]
-name = "desku"
-path = "src/desku.rs"
-required-features = ["only-usual"]
-
-[features]
-default = []
-# default = ["only-usual"]
-
-only-usual = []
