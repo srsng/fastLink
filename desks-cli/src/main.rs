@@ -29,7 +29,7 @@ fn main() {
 fn handle_desktop_setter(args: Args) -> MyResult<()> {
     match args.command {
         Commands::Init => handle_desktop_init(),
-        Commands::Reset => handle_desktop_reset(),
+        Commands::Reset { keep_usual_paths } => handle_desktop_reset(Some(keep_usual_paths)),
         Commands::Set {
             new_desktop_dir_path,
             make_dir,

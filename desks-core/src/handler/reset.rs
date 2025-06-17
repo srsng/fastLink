@@ -4,12 +4,13 @@ use crate::{state::DESKTOP_STATE, utils::rollback::Transaction};
 use crate::{ErrorCode, MyError, MyResult};
 use fastlink_core::utils::path::get_path_type;
 
-pub fn handle_desktop_reset() -> MyResult<()> {
+pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
     let (initial_path, initial_path_temp) = {
         let state = DESKTOP_STATE.state_mut();
         (state.initial_path.clone(), state.initial_path_temp.clone())
     };
 
+    // todo: state文件被"备份后"，怎么reset
     // 两路径都为空
     if initial_path.is_none() && initial_path_temp.is_none() {
         log::warn!("未经过初始化");
@@ -36,9 +37,10 @@ pub fn handle_desktop_reset() -> MyResult<()> {
         {
             desktop_reset(initial_path, initial_path_temp)?;
             {
-                DESKTOP_STATE.reset();
+                DESKTOP_STATE.reset(keep_usual_paths);
                 DESKTOP_STATE.save()?;
             };
+            log::info!("重置成功");
             Ok(())
         // 或者当initial_path_temp存在且为目录，initial_path不存在时 (其他情况`1`)
         } else if initial_path_temp_status.code == ErrorCode::TargetExistsAndNotLink
@@ -48,10 +50,10 @@ pub fn handle_desktop_reset() -> MyResult<()> {
             // 把initial_path_temp重命名为initial_path
             desktop_reset_1(initial_path, initial_path_temp)?;
             {
-                DESKTOP_STATE.reset();
+                DESKTOP_STATE.reset(keep_usual_paths);
                 DESKTOP_STATE.save()?;
             }
-
+            log::info!("重置成功");
             Ok(())
         } else {
             Err(MyError::new(

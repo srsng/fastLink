@@ -1,8 +1,11 @@
 #![windows_subsystem = "windows"]
 
 pub mod msgbox;
-use crate::{msgbox::msgbox_error, tray::load_icon};
-use anyhow::Result;
+use crate::{
+    msgbox::{msgbox_error, msgbox_warn},
+    tray::load_icon,
+};
+use anyhow::{Ok, Result};
 use desks_core::DESKTOP_STATE;
 use std::collections::HashMap;
 pub mod tray;
@@ -24,6 +27,12 @@ fn main() -> Result<()> {
     let debug = false;
     let save_log = None;
     LogIniter::new(false, debug, save_log).init();
+
+    let instance = single_instance::SingleInstance::new("desks-tray").unwrap();
+    if !instance.is_single() {
+        msgbox_warn("请勿多开".into());
+        return Ok(());
+    }
 
     let menu = Menu::new();
     let sep = PredefinedMenuItem::separator();

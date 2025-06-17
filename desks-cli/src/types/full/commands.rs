@@ -43,8 +43,12 @@ pub enum Commands {
     #[clap(visible_alias = "u", visible_alias = "switch")]
     Usual { name: String },
 
-    /// 重置所有数据，并将Desktop库恢复为原始状态
-    Reset,
+    /// 重置所有数据，并将Desktop库恢复为原始状态，可使用-k保留常用路径数据
+    Reset {
+        /// 重置时保留常用路径数据
+        #[arg(short, long)]
+        keep_usual_paths: bool,
+    },
 }
 // / 1. 是否存在于文件系统(FileNotExist)
 // / 2. 是否是损坏的符号链接(BrokenSymlink)
