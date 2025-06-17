@@ -33,7 +33,8 @@ path = "src/main_slim.rs"
 required-features = ["fastlink-slim"]
 
 [features]
-default = ["fastlink-slim"]
+default = []
+# default = ["fastlink-slim"]
 # default = ["fastlink-full"]
 
 # fastlink 正则表达式支持
