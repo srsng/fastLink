@@ -388,6 +388,7 @@ dependencies = [
 name = "desks-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "dirs",
  "fastlink-core",

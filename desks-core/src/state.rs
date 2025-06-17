@@ -25,8 +25,42 @@ fn get_state_path() -> String {
 }
 
 // 全局配置单例
-pub static DESKTOP_STATE: Lazy<AutoSaveState> =
-    Lazy::new(|| AutoSaveState::new(get_state_path()).expect("无法初始化配置"));
+pub static DESKTOP_STATE: Lazy<AutoSaveState> = Lazy::new(|| {
+    AutoSaveState::new(get_state_path())
+        .inspect_err(|e| {
+            log::error!("读取状态数据出错: {}", e);
+            // 用户手动修改导致编码或其他原因出错
+            if e.kind() == std::io::ErrorKind::InvalidData && e.to_string().contains("stream did not contain valid UTF-8"){
+                log::warn!("若是因为手动修改导致编码出错请将文件转回UTF-8编码，\n请注意，手动修改前4项可能导致无法恢复的错误！")
+            // 其他原因，重命名state.json到当前时间
+            } else {
+                let path_string = get_state_path();
+                let mut new_path = PathBuf::from(path_string.clone());
+                let ori_path = Path::new(&path_string);
+
+                let timestamp = chrono::Local::now().format("%y-%m-%d-%H-%M-%S");
+                let file_name = format!("state-backup-{}.json", timestamp);
+                new_path.set_file_name(file_name);
+                let res = fs::rename(ori_path, &new_path);
+                match res {
+                    Ok(_) => log::info!(
+                        "已经原始状态数据备份并删除，备份路径: {}",
+                        new_path.display()
+                    ),
+                    Err(e) => MyError::new(
+                        ErrorCode::IoError,
+                        format!(
+                            "在备份当前状态数据到路径{}时出错: {}",
+                            new_path.display(),
+                            e
+                        ),
+                    )
+                    .log(),
+                }
+            };
+        })
+        .expect("无法初始化配置")
+});
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct DesktopState {
