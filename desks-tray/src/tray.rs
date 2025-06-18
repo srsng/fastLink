@@ -30,15 +30,15 @@ pub fn load_icon() -> Icon {
     }
 }
 
-/// 加载可执行文件同目录下的icon.png或icon.ico的图标
+/// 加载可执行文件同目录下的icon.ico或icon.png的图标
 ///
 /// 注: 部分图标，可能为图片分辨率较大或不是正方形等，无法读取作为icon
 pub fn load_relative_icon() -> Option<Icon> {
     if let Ok(exe_path) = env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            Icon::from_path(exe_dir.join("icon.png"), None)
+            Icon::from_path(exe_dir.join("icon.ico"), None)
                 .ok()
-                .map_or(Icon::from_path(exe_dir.join("icon.ico"), None).ok(), Some)
+                .map_or(Icon::from_path(exe_dir.join("icon.png"), None).ok(), Some)
         } else {
             None
         }

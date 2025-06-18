@@ -43,7 +43,7 @@ impl fmt::Display for ErrorCode {
             ErrorCode::TargetExistsAndNotLink => write!(f, "Target Exists And is Not a Link"),
             ErrorCode::DuplicateTarget => write!(f, "Duplicate Target"),
             ErrorCode::BrokenSymlink => write!(f, "Broken Symlink"),
-            ErrorCode::SrcEqDst => write!(f, "<SRC> is Equal to [DST]"),
+            ErrorCode::SrcEqDst => write!(f, "InvalidInput: <SRC> is Equal to [DST]"),
             ErrorCode::PermissionDenied => write!(f, "PermissionDenied"),
             ErrorCode::DirectoryNotEmpty => write!(f, "DirectoryNotEmpty"),
         }

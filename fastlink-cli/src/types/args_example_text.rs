@@ -26,7 +26,7 @@ Example：
 #[cfg(not(feature = "fastlink-slim"))]
 pub const EXAMPLE: &str = r#"
 Example：
-     // 1. 在当前目录创建一个名为document.txt的符号链接（没有给出dst，直接用src文件名）
+    // 1. 在当前目录创建一个名为document.txt的符号链接（没有给出dst，直接用src文件名）
     fastlink some_where/document.txt
 
     // 2. 在当前目录创建一个名为img-link.jpg的符号链接
