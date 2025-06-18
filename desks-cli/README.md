@@ -16,16 +16,18 @@
         不支持多用户，任何手动修改桌面库位置、名称等操作都可能让你丢失桌面库。
         Caution: this program is **UNSAFE**!
 
+
 Usage: desks.exe [OPTIONS] <COMMAND>
 
 Commands:
-  init      初始化，可以使用reset恢复
-  set       设置一个路径为桌面库，必须是一个目录或指向目录的符号链接
-  state     获取当前状态
-  original  设置Desktop库为原始的目录 [aliases: o, ori]
-  usual     快速切换为通过set --usual <name>设置的一些常用路径，使用state命令查看已设置列表 [aliases: u, switch]
-  reset     重置所有数据，并将Desktop库恢复为原始状态，可使用-k保留常用路径数据
-  help      Print this message or the help of the given subcommand(s)
+  init       初始化，可以使用reset恢复
+  set        设置一个路径为桌面库，必须是一个目录或指向目录的符号链接
+  state      获取当前状态
+  original   设置Desktop库为原始的目录 [aliases: o, ori]
+  usual      快速切换为通过set --usual <name>设置的一些常用路径，使用state命令查看已设置列表 [aliases: u, switch]
+  del-usual  通过名称删除已存在的常用路径 [aliases: del]
+  reset      重置所有数据，并将Desktop库恢复为原始状态，可使用-k保留常用路径数据
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
   -q, --quiet

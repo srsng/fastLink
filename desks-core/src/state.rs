@@ -147,6 +147,12 @@ impl AutoSaveState {
         }
     }
 
+    pub fn del_usual_path_by_name(&self, name: &String) -> Option<PathBuf> {
+        let mut state = self.state_mut();
+
+        state.usual_paths.remove(name)
+    }
+
     pub fn reset(&self, keep_usual_paths: Option<bool>) {
         let mut state = self.state_mut();
         state.initial_path = None;

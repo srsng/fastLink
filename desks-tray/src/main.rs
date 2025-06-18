@@ -9,7 +9,7 @@ use anyhow::{Ok, Result};
 use desks_core::DESKTOP_STATE;
 use std::collections::HashMap;
 pub mod tray;
-use desks_core::handler::{original::handle_desktop_origin, usual::handle_desktop_usual};
+use desks_core::handler::{original::handle_desktop_origin, usual::handle_desktop_usual_setby};
 use fastlink_core::utils::logs::LogIniter;
 use tao::{
     event::{Event, WindowEvent},
@@ -109,7 +109,7 @@ fn main() -> Result<()> {
                 Event::UserEvent(UserEvent::MenuEvent(MenuEvent { id })) => {
                     // 点击 快捷名称
                     if let Some(name) = id2name.get(&id.0) {
-                        if let Err(e) = handle_desktop_usual(name.clone()) {
+                        if let Err(e) = handle_desktop_usual_setby(name.clone()) {
                             e.log();
                             msgbox_error(format!("{}", e));
                         }

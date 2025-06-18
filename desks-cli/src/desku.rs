@@ -3,7 +3,7 @@ pub mod types;
 
 use crate::types::args::Args;
 use clap::Parser;
-use desks_core::handler::usual::handle_desktop_usual;
+use desks_core::handler::usual::handle_desktop_usual_setby;
 use desks_core::state::DESKTOP_STATE;
 pub use fastlink_core::types::err::{ErrorCode, MyError, MyResult};
 
@@ -24,5 +24,5 @@ fn main() {
 }
 
 fn handle_desktop_setter(args: Args) -> MyResult<()> {
-    handle_desktop_usual(args.name)
+    handle_desktop_usual_setby(args.name)
 }

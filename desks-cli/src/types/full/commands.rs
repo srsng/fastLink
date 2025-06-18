@@ -43,6 +43,10 @@ pub enum Commands {
     #[clap(visible_alias = "u", visible_alias = "switch")]
     Usual { name: String },
 
+    /// 通过名称删除已存在的常用路径
+    #[clap(visible_alias = "del")]
+    DelUsual { name: String },
+
     /// 重置所有数据，并将Desktop库恢复为原始状态，可使用-k保留常用路径数据
     Reset {
         /// 重置时保留常用路径数据
