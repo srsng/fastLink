@@ -28,17 +28,7 @@ impl LinkTask {
                 log::info!("[rm模式 (--rm)]");
                 self.remove_links()
             }
-            LinkTaskOpMode::Make => self.mklinks(),
-        }
-    }
-
-    fn remove_links_log(self) -> impl FnOnce(bool) {
-        move |b: bool| {
-            if b {
-                log::info!("删除符号链接成功: {}", &self.src_path.display());
-            } else {
-                log::warn!("删除符号链接失败: {}", &self.src_path.display());
-            }
+            LinkTaskOpMode::Make => self.mklinks().map(|_| ()),
         }
     }
 
@@ -83,6 +73,16 @@ impl LinkTask {
         // 有dst用dst
         } else {
             self.remove_links_with_dst()
+        }
+    }
+
+    fn remove_links_log(self) -> impl FnOnce(bool) {
+        move |b: bool| {
+            if b {
+                log::info!("删除符号链接成功: {}", &self.src_path.display());
+            } else {
+                log::warn!("删除符号链接失败: {}", &self.src_path.display());
+            }
         }
     }
 
@@ -143,12 +143,12 @@ impl LinkTask {
     }
 
     #[cfg(not(feature = "fastlink-regex"))]
-    pub fn mklinks(&mut self) -> Result<(), MyError> {
+    pub fn mklinks(&mut self) -> Result<bool, MyError> {
         self._mklink()
     }
 
     #[cfg(feature = "fastlink-regex")]
-    pub fn mklinks(&mut self) -> Result<(), MyError> {
+    pub fn mklinks(&mut self) -> Result<bool, MyError> {
         match &self.args.re_pattern {
             None => self._mklink(),
             Some(_) => {
@@ -159,14 +159,14 @@ impl LinkTask {
     }
 
     #[cfg(feature = "fastlink-regex")]
-    fn _mklinks_re(&self) -> Result<(), MyError> {
+    fn _mklinks_re(&self) -> Result<bool, MyError> {
         if self
             .matched_paths
             .as_ref()
             .is_none_or(|paths| paths.is_empty())
         {
             log::warn!("当前Re匹配后的路径为空");
-            return Ok(());
+            return Ok(false);
         }
 
         if let Some(paths) = self.matched_paths.as_ref() {
@@ -181,7 +181,7 @@ impl LinkTask {
                 // Re匹配后、创建连接前的检查：按页展示需要建立符号链接的路径对
                 // 返回Ok(false)则取消创建
                 if !crate::utils::func::display_paginated_paths(paths, 10, self.args.re_no_check)? {
-                    return Ok(());
+                    return Ok(false);
                 }
             }
 
@@ -229,7 +229,7 @@ impl LinkTask {
             }
             log::info!("符号链接创建完成！");
 
-            Ok(())
+            Ok(true)
         } else {
             Err(MyError::new(
                 ErrorCode::Unknown,
@@ -238,11 +238,13 @@ impl LinkTask {
         }
     }
 
-    fn _mklink(&self) -> Result<(), MyError> {
+    fn _mklink(&self) -> Result<bool, MyError> {
         if self.args.only_dir && self.src_path.is_file() {
-            log::warn!("only_dir: {} is FILE", &self.src_path.display())
+            log::warn!("only_dir: {} is FILE", &self.src_path.display());
+            Ok(false)
         } else if self.args.only_file && self.src_path.is_dir() {
-            log::warn!("only_file: {} is DIR", &self.src_path.display())
+            log::warn!("only_file: {} is DIR", &self.src_path.display());
+            Ok(false)
         } else {
             log::debug!(
                 "符号链接创建中\n\tsrc: {}\n\tdst: {}",
@@ -257,10 +259,15 @@ impl LinkTask {
                 Some(self.args.skip_exist_links),
                 Some(self.args.skip_broken_src_links),
                 Some(self.args.allow_broken_src),
-            )?;
-            log::info!("符号链接创建成功");
+            )
+            .inspect(|b| {
+                if *b {
+                    log::info!("符号链接创建成功");
+                } else {
+                    log::info!("已跳过创建符号链接");
+                }
+            })
         }
-        Ok(())
     }
 
     #[cfg(feature = "fastlink-regex")]

@@ -9,7 +9,18 @@ use std::{
 
 /// 创建符号链接并处理错误
 /// 在dst创建，指向src
-/// Ok(false)表示跳过创建
+///
+/// ## Return
+/// - `Ok(true)` 表示成功创建
+/// - `Ok(false)` 表示跳过创建
+/// - `Err(e)` 表示出于`e`的错误无法创建
+///
+/// ## 参数说明
+/// - `overwrite_links` 覆写已存在的link，优先级高于overwrite_broken_links
+/// - `overwrite_broken_links` 仅覆写已存在的损坏的link
+/// - `skip_exist_links` 跳过已存在的符号链接
+/// - `skip_broken_src_links` 若src是损坏的符号链接，则跳过
+/// - `allow_broken_src` （暂不生效）允许损坏的符号链接作为src
 pub fn mklink(
     src: &PathBuf,
     dst: &PathBuf,
@@ -271,8 +282,6 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
     let src = src.as_ref();
     let dst = dst.as_ref();
 
-    // check_overwrite(dst, overwrite_links, skip_exist_links)?;
-
     // 获取源文件元数据
     let metadata = fs::metadata(src).map_err(|e| {
         MyError::new(
@@ -333,7 +342,6 @@ fn convert_create_symlink_res(
 pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<(), MyError> {
     let src = src.as_ref();
     let dst = dst.as_ref();
-    // check_overwrite(dst, overwrite_links, skip_exist_links)?;
     let res = std::os::unix::fs::symlink(src, dst);
     convert_create_symlink_res(res, src, dst)
 }
