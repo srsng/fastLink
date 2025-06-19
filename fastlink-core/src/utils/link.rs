@@ -306,11 +306,15 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
 }
 
 /// 转换create_symlink中创建符号链接的res
-fn convert_create_symlink_res(
-    res: Result<(), std::io::Error>,
-    src: &Path,
-    dst: &Path,
+///
+fn convert_create_symlink_res<P: AsRef<Path>, Q: AsRef<Path>>(
+    res: std::io::Result<()>,
+    src: P,
+    dst: Q,
 ) -> MyResult<()> {
+    let src = src.as_ref();
+    let dst = dst.as_ref();
+    // fn convert_create_symlink_res(res: std::io::Result<()>, src: &Path, dst: &Path) -> MyResult<()> {
     if let Err(e) = res {
         match e.kind() {
             #[cfg(windows)]
@@ -343,5 +347,23 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
     let src = src.as_ref();
     let dst = dst.as_ref();
     let res = std::os::unix::fs::symlink(src, dst);
+    convert_create_symlink_res(res, src, dst)
+}
+
+#[cfg(windows)]
+pub fn mklink_when_src_dir_not_exists<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dst: Q,
+) -> MyResult<()> {
+    let res = std::os::windows::fs::symlink_dir(&src, &dst);
+    convert_create_symlink_res(res, src, dst)
+}
+
+#[cfg(windows)]
+pub fn mklink_when_src_file_not_exists<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dst: Q,
+) -> MyResult<()> {
+    let res = std::os::windows::fs::symlink_file(&src, &dst);
     convert_create_symlink_res(res, src, dst)
 }

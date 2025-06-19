@@ -50,8 +50,35 @@ pub fn handle_desktop_init() -> MyResult<()> {
     // 已完成情况
     } else if desktop_status.code == ErrorCode::TargetLinkExists && desktop_temp.is_dir() {
         // todo: 检查状态，查看用户是否转移Desktop库，或有其他变动
-        // let state = DESKTOP_STATE.state_mut();
-        log::info!("已初始化，无需重复操作，若需重置，使用reset命令");
+
+        // 如果状态为空则修补
+        if DESKTOP_STATE.state().initial_path.is_none() {
+            // 保存状态
+            {
+                let mut state = DESKTOP_STATE.state_mut();
+                state.initial_path = Some(desktop.clone());
+                state.initial_path_temp = Some(desktop_temp.clone());
+
+                let target = std::fs::read_link(&desktop);
+                state.cur_path = Some(desktop);
+                if let Ok(target) = target {
+                    state.cur_target = Some(target);
+                } else {
+                    log::debug!(
+                        "修补状态文件时，无法读取符号链接desktop指向: {}",
+                        target.err().unwrap()
+                    );
+                    state.cur_target = Some(desktop_temp);
+                }
+            }
+            {
+                DESKTOP_STATE.save()?;
+            }
+            log::info!("初始化成功");
+        } else {
+            log::info!("已初始化，无需重复操作，若需重置，使用reset命令");
+        }
+
         Ok(())
     } else {
         log::warn!(

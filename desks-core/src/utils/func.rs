@@ -5,6 +5,24 @@ use std::path::PathBuf;
 use winreg::enums::*;
 use winreg::RegKey;
 
+/// 使用固定逻辑(在路径后加上`_desktop_setter_temp_{cnt}`, cnt由 1 开始递增)
+/// 得到输入路径的临时版
+pub fn get_temp_path(path: &Path) -> PathBuf {
+    let mut temp_path = path.to_path_buf();
+
+    let ori_name = path.file_name().unwrap_or_default();
+
+    let mut cnt: u16 = 0;
+    loop {
+        cnt += 1;
+        let file_name = format!("{}_desktop_setter_temp_{cnt}", ori_name.to_string_lossy());
+        temp_path.set_file_name(file_name);
+        if !temp_path.exists() {
+            break temp_path;
+        }
+    }
+}
+
 /// 使用固定逻辑(在路径后加上`_desktop_setter_temp`),
 /// 得到输入路径的临时版
 pub fn get_dir_temp(path: &Path) -> MyResult<PathBuf> {

@@ -1,5 +1,10 @@
 use crate::{ErrorCode, MyError, MyResult};
-use fastlink_core::utils::link::{del_exists_link, mklink};
+use fastlink_core::utils::link::{
+    del_exists_link,
+    mklink,
+    mklink_when_src_dir_not_exists,
+    //  mklink_when_src_file_not_exists,
+};
 use std::path::PathBuf;
 use std::{fs, iter::zip};
 
@@ -26,11 +31,11 @@ impl Transaction {
     {
         let name = name.unwrap_or_default();
         // 执行操作
-        log::debug!("执行操作{}中", name);
+        log::debug!("执行操作 {} 中", name);
         op().inspect_err(|e| {
             log::warn!("执行操作 {} 失败: {}", name, e);
         })?;
-        log::debug!("执行操作{}成功", name);
+        log::debug!("执行操作 {} 成功", name);
         // 如果成功，记录撤销函数
         self.undo_ops_name.push(name);
         self.undo_ops.push(Box::new(undo));
@@ -89,6 +94,28 @@ impl Transaction {
         let (op, undo) = op_del_link(original, link);
         self.add_op(op, undo, name)
     }
+
+    /// unsafe表示它undo操作将创建一个指向不存在的路径的符号链接
+    pub fn add_op_del_link_unsafe_dir(
+        &mut self,
+        original: PathBuf,
+        link: PathBuf,
+        name: Option<String>,
+    ) -> MyResult<()> {
+        let (op, undo) = op_del_link_unsafe_dir(original, link);
+        self.add_op(op, undo, name)
+    }
+
+    // /// unsafe表示它undo操作将创建一个指向不存在的路径的符号链接
+    // pub fn add_op_del_link_unsafe_file(
+    //     &mut self,
+    //     original: PathBuf,
+    //     link: PathBuf,
+    //     name: Option<String>,
+    // ) -> MyResult<()> {
+    //     let (op, undo) = op_del_link_unsafe_file(original, link);
+    //     self.add_op(op, undo, name)
+    // }
 }
 
 impl Drop for Transaction {
@@ -114,9 +141,38 @@ fn op_del_link(
 
     let op = move || del_exists_link(&dst_c, true, Some(false)).map(|_| ());
     let undo = move || mklink(&src, &dst, Some(false), None, None, None, Some(true)).map(|_| ());
+    (op, undo)
+}
+
+fn op_del_link_unsafe_dir(
+    original: PathBuf,
+    link: PathBuf,
+) -> (impl FnOnce() -> MyResult<()>, impl FnOnce() -> MyResult<()>) {
+    let src = original;
+    let dst = link;
+    // let src_c = src.clone();
+    let dst_c = dst.clone();
+
+    let op = move || del_exists_link(&dst_c, true, Some(false)).map(|_| ());
+    let undo = || mklink_when_src_dir_not_exists(src, dst);
 
     (op, undo)
 }
+
+// fn op_del_link_unsafe_file(
+//     original: PathBuf,
+//     link: PathBuf,
+// ) -> (impl FnOnce() -> MyResult<()>, impl FnOnce() -> MyResult<()>) {
+//     let src = original;
+//     let dst = link;
+//     // let src_c = src.clone();
+//     let dst_c = dst.clone();
+
+//     let op = move || del_exists_link(&dst_c, true, Some(false)).map(|_| ());
+//     let undo = || mklink_when_src_file_not_exists(src, dst);
+
+//     (op, undo)
+// }
 
 // fn op_null() -> (impl FnOnce() -> MyResult<()>, impl FnOnce() -> MyResult<()>) {
 //     let op = move || Ok(());
