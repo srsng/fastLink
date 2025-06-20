@@ -53,6 +53,7 @@ pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
             };
             log::info!("重置成功");
             handle_fresh_desktop();
+            log::info!("桌面已刷新");
             Ok(())
         // 或者当initial_path_temp存在且为目录，initial_path不存在时 (其他情况`1`)
         } else if initial_path_temp_status.code == ErrorCode::TargetExistsAndNotLink
@@ -67,6 +68,7 @@ pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
             }
             log::info!("重置成功");
             handle_fresh_desktop();
+            log::info!("桌面已刷新");
             Ok(())
         } else {
             Err(MyError::new(

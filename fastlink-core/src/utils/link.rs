@@ -276,7 +276,9 @@ fn handle_create_symlink_error(
     }
 }
 
-/// 智能创建符号链接（自动判断文件/目录）
+/// 安全、智能创建符号链接（自动判断文件/目录）, 不允许src为损坏的符号链接或不存在的目录
+///
+/// 需要简单地创建使用 `mklink_when_src_dir_not_exists` 或 `mklink_when_src_file_not_exists`
 #[cfg(windows)]
 pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<(), MyError> {
     let src = src.as_ref();
@@ -306,7 +308,6 @@ pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<
 }
 
 /// 转换create_symlink中创建符号链接的res
-///
 fn convert_create_symlink_res<P: AsRef<Path>, Q: AsRef<Path>>(
     res: std::io::Result<()>,
     src: P,
@@ -343,11 +344,29 @@ fn convert_create_symlink_res<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 #[cfg(unix)]
-pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<(), MyError> {
+pub fn create_symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> MyResult<()> {
     let src = src.as_ref();
     let dst = dst.as_ref();
     let res = std::os::unix::fs::symlink(src, dst);
     convert_create_symlink_res(res, src, dst)
+}
+
+#[inline]
+#[cfg(unix)]
+pub fn mklink_when_src_dir_not_exists<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dst: Q,
+) -> MyResult<()> {
+    create_symlink(src, dst)
+}
+
+#[inline]
+#[cfg(unix)]
+pub fn mklink_when_src_file_not_exists<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dst: Q,
+) -> MyResult<()> {
+    create_symlink(src, dst)
 }
 
 #[cfg(windows)]

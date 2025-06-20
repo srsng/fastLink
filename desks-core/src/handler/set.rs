@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+// use crate::utils::layout::{restore_desktop_layout_by_path, save_cur_layout_to_path};
 use crate::{
     handler::fresh::handle_fresh_desktop, state::DESKTOP_STATE, utils::func::get_temp_path,
     utils::rollback::Transaction,
@@ -28,6 +29,7 @@ pub fn handle_desktop_set(
 
     // 当新desktop与目前desktop为同一个时，跳过
     if cur_target.is_some() && Some(new_desktop_path.clone()) == cur_target {
+        log::debug!("新desktop与当前相同");
         return Ok(());
     }
 
@@ -44,6 +46,7 @@ pub fn handle_desktop_set(
             ))
         }
     } else {
+        let cur_path = cur_path.unwrap();
         if make_dir {
             let res = mk_parents(&new_desktop_path)?;
             if res {
@@ -59,11 +62,21 @@ pub fn handle_desktop_set(
             }
         }
 
-        desktop_set(
-            new_desktop_path.clone(),
-            cur_path.unwrap(),
-            cur_target.unwrap(),
-        )?;
+        if cur_target.is_none() {
+            return Err(MyError::new(ErrorCode::Unknown, "cur_target 已丢失".into()));
+        }
+        let cur_target = cur_target.unwrap();
+
+        // 保存layout
+        // let _ = save_cur_layout_to_path(&cur_target)
+        //     .inspect_err(|e| {
+        //         log::debug!("保存当前desktop layout失败：{}", e);
+        //     })
+        //     .map(|_| {
+        //         log::debug!("保存当前desktop layout成功");
+        //     });
+        // 设置新桌面
+        desktop_set(new_desktop_path.clone(), cur_path, cur_target)?;
         log::info!(
             "已设置 {} 作为Desktop，在桌面F5刷新或等待片刻以应用",
             new_desktop_path.display()
@@ -74,10 +87,20 @@ pub fn handle_desktop_set(
             let mut state = DESKTOP_STATE.state_mut();
             state.cur_target = Some(new_desktop_path.clone());
         }
+        // 保存状态
         {
             DESKTOP_STATE.save()?;
         }
+        // 加载新桌面layout
+        // let _ = restore_desktop_layout_by_path(&new_desktop_path)
+        //     .inspect_err(|e| {
+        //         log::debug!("加载新desktop的layout失败：{}", e);
+        //     })
+        //     .map(|b| {
+        //         log::debug!("加载新desktop的layout: {}", b);
+        //     });
         handle_fresh_desktop();
+        log::info!("桌面已刷新");
         Ok(())
     }
     // Ok(())

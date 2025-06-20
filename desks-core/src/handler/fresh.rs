@@ -6,5 +6,4 @@ pub fn handle_fresh_desktop() {
         // 通知系统刷新桌面
         SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None);
     }
-    log::info!("桌面已刷新");
 }
