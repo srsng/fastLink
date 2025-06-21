@@ -64,16 +64,22 @@ jobs:
         with:
             python-version: '3.10'
 
-      - name: Install Nuitka and dependencies
-        run: |
-          cd desktop-layout/py_get_layout
-          pip install nuitka
-          pip install -r requirements.lock
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('desktop-layout/py_get_layout/requirements.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Build py-exe with Nuitka
+      - name: Install Nuitka and dependencies and Build py to exe
         run: |
+          python -m pip install --upgrade pip
+          pip install nuitka
+          pip install -r desktop-layout/py_get_layout/requirements.lock
+          cd desktop-layout/py_get_layout
           python -m nuitka --onefile --standalone --assume-yes-for-downloads --output-dir=..\assets .\src\get_icon_layout.py
-          cd ../..
+          cd ${{ github.workspace }}
 
       - name: Build Release Binary desku
         run: cargo build --release --bin desku --features=only-usual
