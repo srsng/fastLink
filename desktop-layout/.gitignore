@@ -1,1 +1,6 @@
-assets/*
+assets/*.build
+assets/*.dist
+assets/*.onefile-build
+run.bat
+
+# remain get_icon_layout.exe to pass the clippy check

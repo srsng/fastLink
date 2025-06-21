@@ -72,12 +72,7 @@ jobs:
 
       - name: Build py-exe with Nuitka
         run: |
-          python -m nuitka \
-            --onefile \
-            --standalone \
-            --assume-yes-for-downloads \
-            --output-dir=..\assets \
-            .\src\get_icon_layout.py
+          python -m nuitka --onefile --standalone --assume-yes-for-downloads --output-dir=..\assets .\src\get_icon_layout.py
           cd ../..
 
       - name: Build Release Binary desku
