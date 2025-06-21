@@ -80,6 +80,9 @@ impl MyError {
     pub fn warn(&self) {
         log::warn!("{}", self);
     }
+    pub fn debug(&self) {
+        log::debug!("{}", self);
+    }
 }
 
 // #[cfg(test)]

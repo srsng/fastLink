@@ -11,7 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 chrono = "0.4.41"
-clap = { version = "4.5.40", features = ["derive"] }
+clap = { version = "4.5.40" }
 dunce = "1.0.5"
 env_logger = { version = "0.11.8" }
 lazy_static = "1.5.0"

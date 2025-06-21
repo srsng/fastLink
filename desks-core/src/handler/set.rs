@@ -67,14 +67,6 @@ pub fn handle_desktop_set(
         }
         let cur_target = cur_target.unwrap();
 
-        // 保存layout
-        // let _ = save_cur_layout_to_path(&cur_target)
-        //     .inspect_err(|e| {
-        //         log::debug!("保存当前desktop layout失败：{}", e);
-        //     })
-        //     .map(|_| {
-        //         log::debug!("保存当前desktop layout成功");
-        //     });
         // 设置新桌面
         desktop_set(new_desktop_path.clone(), cur_path, cur_target)?;
         log::info!(
@@ -91,14 +83,6 @@ pub fn handle_desktop_set(
         {
             DESKTOP_STATE.save()?;
         }
-        // 加载新桌面layout
-        // let _ = restore_desktop_layout_by_path(&new_desktop_path)
-        //     .inspect_err(|e| {
-        //         log::debug!("加载新desktop的layout失败：{}", e);
-        //     })
-        //     .map(|b| {
-        //         log::debug!("加载新desktop的layout: {}", b);
-        //     });
         handle_fresh_desktop();
         log::info!("桌面已刷新");
         Ok(())

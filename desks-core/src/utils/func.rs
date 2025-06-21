@@ -4,34 +4,6 @@ use std::path::{Path, PathBuf};
 use winreg::enums::*;
 use winreg::RegKey;
 
-/// 将路径的根或盘符标识移除
-pub fn strip_root<P: AsRef<Path>>(path: P) -> String {
-    let path_str = path.as_ref().to_string_lossy().into_owned();
-
-    // 处理Windows扩展路径 \\?\，如\\?\D:\
-    if let Some(after_prefix) = path_str.strip_prefix(r#"\\?\"#) {
-        // 查找第一个反斜杠后的内容
-        if let Some(pos) = after_prefix.find('\\') {
-            return after_prefix[pos + 1..].to_string();
-        }
-        return after_prefix.to_string();
-    }
-
-    // 处理Windows驱动器路径，如 D:\
-    if path_str.len() >= 2 && path_str.chars().nth(1) == Some(':') {
-        let after_drive = &path_str[3..]; // 跳过 D:\
-        return after_drive.to_string();
-    }
-
-    // 处理Linux根路径 /
-    if let Some(path_str) = path_str.strip_prefix('/') {
-        return path_str.to_string();
-    }
-
-    // 无需处理的情况，直接返回原路径
-    path_str
-}
-
 /// 使用固定逻辑(在路径后加上`_desktop_setter_temp_{cnt}`, cnt由 1 开始递增)
 /// 得到输入路径的临时版
 pub fn get_temp_path(path: &Path) -> PathBuf {
@@ -254,17 +226,5 @@ mod tests {
 
         // 测试不存在的环境变量
         assert!(parse_env_vars("/home/$UNKNOWN_VAR/test".into()).is_err());
-    }
-
-    #[test]
-    fn test_strip_root() {
-        assert_eq!(strip_root("/home/user"), "home/user");
-        assert_eq!(strip_root("D:/Program Files"), "Program Files");
-        assert_eq!(strip_root(r#"\\?\E:\Data"#), "Data");
-        assert_eq!(strip_root("relative/path"), "relative/path");
-        assert_eq!(strip_root("/"), "");
-        assert_eq!(strip_root("C:/"), "");
-        assert_eq!(strip_root(r#"\\?\F:\"#), "");
-        assert_eq!(strip_root("\\123/123"), "\\123/123");
     }
 }

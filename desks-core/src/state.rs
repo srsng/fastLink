@@ -127,11 +127,11 @@ impl AutoSaveState {
         })
     }
 
-    pub fn state(&self) -> std::sync::MutexGuard<DesktopState> {
+    pub fn state(&self) -> std::sync::MutexGuard<'_, DesktopState> {
         self.state.lock().unwrap()
     }
 
-    pub fn state_mut(&self) -> std::sync::MutexGuard<DesktopState> {
+    pub fn state_mut(&self) -> std::sync::MutexGuard<'_, DesktopState> {
         self.state.lock().unwrap()
     }
 
