@@ -26,6 +26,26 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 [fastlink-help](./fastlink-cli/README.md#fastlink-help)
 
+# Desks 系列
+包含两个命令行工具与一个托盘程序。
+
+描述
+```
+    Windows平台下修改Desktop库目标文件夹, 使用符号链接指向已有的文件夹, 动态修改桌面内容
+    声明：
+        注意，不保证安全，有很多实际问题没有解决，如果遇到问题，请积极提交issue。
+        不支持多用户，任何手动修改桌面库位置、名称等操作都可能让你丢失桌面库。
+        Caution: this program is **UNSAFE**!
+```
+
+支持保持桌面布局
+
+
+场景示例：
+- 桌面文件/文件夹众多，想要工作、休闲分离
+- 有一些文件/文件夹想放桌面，但是平时又不想让其他人看见
+- 换一个桌面，即刻切换你跟电脑的状态
+
 ## desks-core
 
 **desks**系列(desks, desku, desks-tray)的核心，主要定义了一些处理方法以及一个状态数据文件。
@@ -49,6 +69,13 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 [desks-tray usage](./desks-tray/README.md#usage)
 
+
+## desktop-layout
+实现保存、恢复桌面图标布局
+
+读取当前布局信息暂时使用python实现，再打包到exe由rust执行二进制
+
+(python打包已经纳入在GitHub Action Workflow中)
 
 ## Feedback
 如果发生了一些预期之外的问题，提个issue，记得贴上带`--debug`参数时的日志。

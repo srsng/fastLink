@@ -1,0 +1,39 @@
+[package]
+name = "desktop-layout"
+version = "0.1.0"
+edition = "2021"
+authors = ["srsnng"]
+description = "保存、恢复Windows桌面图标布局"
+license = "Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+fastlink-core = { path = "../fastlink-core", features = [] }
+chrono = "0.4.41"
+log = "0.4.27"
+encoding_rs = "0.8.35"
+dirs = { version = "6.0.0" }
+
+[dependencies.windows]
+version = "0.61.3"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_Controls",
+    # "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    # "Win32_System_LibraryLoader",
+    # "Win32_System_Ole",
+    # "Win32_System_Variant",
+    # "Win32_UI_Shell_Common",
+]
+
+[features]
+
+default= [
+    # "update-window"
+]
+
+update-window = ["windows/Win32_Graphics_Gdi"]
+system-com = ["windows/Win32_System_Com"]

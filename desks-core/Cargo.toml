@@ -10,6 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 fastlink-core = { path = "../fastlink-core", features = [] }
+desktop-layout = { path = "../desktop-layout", optional = true }
 log = "0.4.27"
 clap = { version = "4.5.40", features = ["derive"] }
 dirs = { version = "6.0.0" }
@@ -24,3 +25,7 @@ chrono = "0.4.41"
 version = "0.61.3"
 features = ["Win32_Foundation", "Win32_UI_Shell"]
 
+[features]
+default = ["keep-layout"]
+
+keep-layout = ["desktop-layout"]

@@ -1,0 +1,4 @@
+# desktop-layout
+实现保存、恢复桌面图标布局
+
+读取当前布局信息暂时使用python实现，再打包到exe由rust执行二进制

@@ -55,6 +55,31 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Install MSVC (Windows only)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.10'
+
+      - name: Install Nuitka and dependencies
+        run: |
+          cd desktop-layout/py_get_layout
+          pip install nuitka
+          pip install -r requirements.lock
+
+      - name: Build py-exe with Nuitka
+        run: |
+          python -m nuitka \
+            --onefile \
+            --standalone \
+            --assume-yes-for-downloads \
+            --output-dir=..\assets \
+            .\src\get_icon_layout.py
+          cd ../..
+
       - name: Build Release Binary desku
         run: cargo build --release --bin desku --features=only-usual
 

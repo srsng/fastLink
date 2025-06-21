@@ -1,11 +1,14 @@
 use std::path::{Path, PathBuf};
 
-// use crate::utils::layout::{restore_desktop_layout_by_path, save_cur_layout_to_path};
+use crate::handler::fresh::handle_fresh_desktop_force;
 use crate::{
     handler::fresh::handle_fresh_desktop, state::DESKTOP_STATE, utils::func::get_temp_path,
     utils::rollback::Transaction,
 };
 use crate::{ErrorCode, MyError, MyResult};
+#[cfg(feature = "keep-layout")]
+use desktop_layout::handler::{restore_desktop_layout_by_path, store_cur_layout_to_path};
+
 use fastlink_core::utils::fs::mk_parents;
 
 pub fn handle_desktop_set(
@@ -66,8 +69,22 @@ pub fn handle_desktop_set(
             return Err(MyError::new(ErrorCode::Unknown, "cur_target 已丢失".into()));
         }
         let cur_target = cur_target.unwrap();
-
+        // 保存layout
+        #[cfg(feature = "keep-layout")]
+        let last_layout = {
+            log::debug!("开始保存当前desktop layout");
+            let layout = store_cur_layout_to_path(&cur_target)
+                .inspect_err(|e| {
+                    log::debug!("保存当前desktop layout失败：{}", e);
+                })
+                .inspect(|_| {
+                    log::debug!("保存当前desktop layout成功");
+                });
+            log::debug!("get last layout : {:?}", layout);
+            layout
+        };
         // 设置新桌面
+        log::debug!("开始设置新桌面");
         desktop_set(new_desktop_path.clone(), cur_path, cur_target)?;
         log::info!(
             "已设置 {} 作为Desktop，在桌面F5刷新或等待片刻以应用",
@@ -84,6 +101,26 @@ pub fn handle_desktop_set(
             DESKTOP_STATE.save()?;
         }
         handle_fresh_desktop();
+        // 加载新桌面layout
+        #[cfg(feature = "keep-layout")]
+        let _task = {
+            let last_layout = last_layout.ok();
+            // std::thread::spawn(move || {
+            handle_fresh_desktop_force();
+            log::debug!("开始加载新desktop的layout");
+
+            let _ = restore_desktop_layout_by_path(&new_desktop_path, last_layout.as_ref())
+                .inspect_err(|e| {
+                    log::debug!("加载新desktop的layout失败：{}", e);
+                })
+                .map(|b| {
+                    log::debug!("加载新desktop的layout: {}", b);
+                });
+            // })
+            1
+        };
+        // #[cfg(feature = "keep-layout")]
+        // let _res = task.join();
         log::info!("桌面已刷新");
         Ok(())
     }
