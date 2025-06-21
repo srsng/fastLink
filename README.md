@@ -12,23 +12,6 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 项目为一个workspace，包含多个crate，每个crate内都有各自的README.md
 
-## fastlink-core
-项目核心，包含`LinkTask`以及相关结构体定义，mklink以及相关函数定义，日志系统。  
-
-先构建`LinkTaskArgs`（使用builder或from(Args)），经过`LinkTaskPre`预处理，得到`LinkTask`，
-对`LinkTask`实例使用mklinks等方法可以创建、检查、删除符号链接。
-
-## fastlink-cli
-包含两个二进制: `fastlink`与`fastlink-slim`
-
-用于在命令行创建符号链接，具体用法可以参考示例或`--help`
-
-`fastlink-slim`不包含re支持与save_log  
-
-两个二进制都可以使用可选参数`-c`检查路径，`--rm`删除已存在的符号链接
-
-[fastlink-help](./fastlink-cli/README.md#fastlink-help)
-
 # Desks 系列
 包含两个命令行工具与一个托盘程序。
 
@@ -47,7 +30,24 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 场景示例：
 - 桌面文件/文件夹众多，想要工作、休闲分离
 - 有一些文件/文件夹想放桌面，但是平时又不想让其他人看见
-- 换一个桌面，即刻切换你跟电脑的状态
+- 换一个桌面，即刻切换你跟电脑的状态与心情
+
+## fastlink-core
+项目核心，包含`LinkTask`以及相关结构体定义，mklink以及相关函数定义，日志系统。  
+
+先构建`LinkTaskArgs`（使用builder或from(Args)），经过`LinkTaskPre`预处理，得到`LinkTask`，
+对`LinkTask`实例使用mklinks等方法可以创建、检查、删除符号链接。
+
+## fastlink-cli
+包含两个二进制: `fastlink`与`fastlink-slim`
+
+用于在命令行创建符号链接，具体用法可以参考示例或`--help`
+
+`fastlink-slim`不包含re支持与save_log  
+
+两个二进制都可以使用可选参数`-c`检查路径，`--rm`删除已存在的符号链接
+
+[fastlink-help](./fastlink-cli/README.md#fastlink-help)
 
 ## desks-core
 
@@ -78,7 +78,7 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 读取当前布局信息暂时使用python实现，再打包到exe由rust执行二进制
 
-(python打包已经纳入在GitHub Action Workflow中)
+(GitHub Action Workflow中打包python得到的二进制有点问题，暂时使用本地打包)
 
 ## Feedback
 如果发生了一些预期之外的问题，提个issue，记得贴上带`--debug`参数时的日志。
