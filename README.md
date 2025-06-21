@@ -1,4 +1,7 @@
 # fastLink
+[![Windows release](https://github.com/srsng/fastLink/actions/workflows/windows-release.yml/badge.svg)](https://github.com/srsng/fastLink/actions/workflows/windows-release.yml)
+
+
 A tool to make symlink fastly and smartly, support regex  
 一个智能且方便的符号链接创建工具，支持regex，以及一些基于符号链接实现的程序(`desks`系列)
 
