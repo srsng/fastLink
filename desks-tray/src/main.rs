@@ -1,30 +1,35 @@
 #![windows_subsystem = "windows"]
 
-pub mod msgbox;
+mod msgbox;
+mod tray;
+
 use crate::{
     msgbox::{msgbox_error, msgbox_warn},
-    tray::load_icon,
+    tray::{
+        info::menu_item_about,
+        setup::{setup_icon, setup_keep_layout, setup_usual_names},
+    },
 };
-use anyhow::{Ok, Result};
-use desks_core::DESKTOP_STATE;
-use std::collections::HashMap;
-pub mod tray;
+
 use desks_core::handler::{original::handle_desktop_origin, usual::handle_desktop_usual_setby};
+use fastlink_core::types::err::MyResult;
 use fastlink_core::utils::logs::LogIniter;
+
 use tao::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoopBuilder},
 };
 use tray_icon::{
-    menu::{accelerator::Accelerator, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    TrayIconBuilder, TrayIconEvent,
+    menu::{Menu, MenuEvent, PredefinedMenuItem},
+    TrayIconEvent,
 };
 
-use crate::tray::menu_item_about;
-
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     // 初始化日志
+    #[cfg(not(debug_assertions))]
     let debug = false;
+    #[cfg(debug_assertions)]
+    let debug = true;
     let save_log = None;
     LogIniter::new(false, debug, save_log).init();
 
@@ -39,34 +44,15 @@ fn main() -> Result<()> {
     let about = menu_item_about();
 
     menu.append(&about)?;
-    // vec.push(&sep);
     // let test_item = MenuItem::new("test", true, Some("shift+alt+KeyC".parse().unwrap()));
-    // vec.push(&test_item);
+    // menu.append(&sep)?;
+    // menu.append(&test_item)?;
     menu.append(&sep)?;
-
-    // 菜单项 快捷名称
-    const MAX_NAME_ITEMS: usize = 10;
-    let mut id2name = HashMap::new();
-    let names: Vec<_> = {
-        let state = DESKTOP_STATE.state();
-        let usual_paths = &state.usual_paths;
-        usual_paths.keys().take(MAX_NAME_ITEMS).cloned().collect()
-    };
-
-    if names.is_empty() {
-        let null_item = MenuItem::new("(没有快捷项目，使用命令行工具desks.exe添加)", false, None);
-        menu.append(&null_item)?;
-    } else {
-        for (i, name) in names.into_iter().enumerate() {
-            // let acc: Accelerator = format!("F{}", i + 1).parse().unwrap();
-            let acc: Accelerator = format!("Digit{}", (i + 1) % 10).parse().unwrap();
-            let menu_item = MenuItem::new(&name, true, Some(acc));
-
-            id2name.insert(menu_item.id().0.clone(), name);
-            menu.append(&menu_item)?;
-        }
-    }
-
+    // 管理桌面布局菜单块
+    let (_kl_items, keep_layout_id2handler) = setup_keep_layout(&menu, Some(false))?;
+    menu.append(&sep)?;
+    // 桌面常用名称菜单块
+    let (_items, id2name) = setup_usual_names(&menu)?;
     menu.append(&sep)?;
     // 菜单项 退出
     let exit_item = PredefinedMenuItem::quit(Some("退出"));
@@ -75,16 +61,9 @@ fn main() -> Result<()> {
     // 创建带用户事件的事件循环
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
 
-    // 加载托盘图标
-    let icon = load_icon();
-
     // 构建托盘图标
-    let _tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(menu))
-        .with_tooltip("Desks")
-        .with_icon(icon)
-        .build()
-        .inspect_err(|e| msgbox_error(format!("无法构建托盘图标: {}", e)))?;
+    let box_menu = Box::new(menu);
+    let _tray_icon = setup_icon(box_menu)?;
 
     // 设置菜单事件处理
     let proxy = event_loop.create_proxy();
@@ -98,43 +77,65 @@ fn main() -> Result<()> {
         let _ = proxy.send_event(UserEvent::TrayEvent(event));
     }));
 
-    let event_handler =
-        move |event: Event<'_, UserEvent>,
-              _window_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
-              control_flow: &mut ControlFlow| {
-            *control_flow = ControlFlow::Wait;
+    type WindowTarget<'a> = &'a tao::event_loop::EventLoopWindowTarget<UserEvent>;
+    let event_handler = move |event: Event<'_, UserEvent>,
+                              _window_target: WindowTarget,
+                              control_flow: &mut ControlFlow| {
+        *control_flow = ControlFlow::Wait;
 
-            match event {
-                // 菜单项事件
-                Event::UserEvent(UserEvent::MenuEvent(MenuEvent { id })) => {
+        match event {
+            // 菜单项事件
+            Event::UserEvent(UserEvent::MenuEvent(MenuEvent { id })) => {
+                let res = match id.0 {
                     // 点击 快捷名称
-                    if let Some(name) = id2name.get(&id.0) {
-                        if let Err(e) = handle_desktop_usual_setby(name.clone()) {
-                            e.log();
-                            msgbox_error(format!("{}", e));
-                        }
+                    id if id2name.contains_key(&id) => {
+                        let name = id2name.get(&id).unwrap();
+                        handle_desktop_usual_setby(name)
                     }
-                }
-                // 双击托盘图标设回原始桌面
-                Event::UserEvent(UserEvent::TrayEvent(TrayIconEvent::DoubleClick { .. })) => {
-                    if let Err(e) = handle_desktop_origin() {
-                        e.log();
-                        msgbox_error(format!("{}", e));
+                    // 手动布局保存/读取操作
+                    id if keep_layout_id2handler.contains_key(&id) => {
+                        let handler_ = keep_layout_id2handler.get(&id).unwrap();
+                        handler_()
                     }
-                }
-
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    *control_flow = ControlFlow::Exit;
-                }
-                _ => {}
+                    _ => {
+                        log::debug!("unhandled userevent menuid");
+                        Ok(false)
+                    }
+                };
+                handle_result(res);
             }
-        };
+            // 双击托盘图标设回原始桌面
+            Event::UserEvent(UserEvent::TrayEvent(TrayIconEvent::DoubleClick { .. })) => {
+                let res = handle_desktop_origin();
+                handle_result(res);
+            }
+
+            // 不存在的窗口
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                *control_flow = ControlFlow::Exit;
+            }
+            _ => {}
+        }
+    };
 
     // 运行事件循环
     event_loop.run(event_handler);
+}
+
+/// 处理错误，Ok里的东西不重要时挺好用
+fn handle_result<T: std::fmt::Debug>(res: MyResult<T>) -> Option<T> {
+    if let Err(e) = res {
+        e.log();
+        msgbox_error(format!("{}", e));
+        None
+    } else {
+        let ok_ = res.unwrap();
+        log::debug!("{:?}", ok_);
+        Some(ok_)
+    }
 }
 
 // 自定义用户事件类型

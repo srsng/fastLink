@@ -1,6 +1,6 @@
 [package]
 name = "desks-tray"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["srsnng"]
 license = "Apache-2.0"
@@ -9,11 +9,13 @@ build = "build.rs"
 [dependencies]
 fastlink-core = { path = "../fastlink-core", features = [] }
 desks-core = { path = "../desks-core", features = [] }
+desktop-layout = { path = "../desktop-layout", optional = true }
 log = "0.4.27"
 tao = { version = "0.33.0" }
 anyhow = { version = "1.0.98" }
 tray-icon = { version = "0.20.1" }
 single-instance = "0.3.3"
+rfd = { version = "0.15.3", optional = true }
 
 [dependencies.windows]
 version = "0.61.3"
@@ -25,3 +27,13 @@ embed-resource = "3.0.4"
 [[bin]]
 name = "desks-tray"
 path = "src/main.rs"
+
+[features]
+default = ["keep-layout"]
+
+keep-layout = ["keep-layout-auto", "keep-layout-manual"]
+
+# 自动保存/恢复布局
+keep-layout-auto = ["dep:desktop-layout"]
+# 对话框保存恢复布局
+keep-layout-manual = ["dep:rfd", "dep:desktop-layout"]
