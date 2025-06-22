@@ -1,7 +1,7 @@
 pub mod handler;
 pub mod layout;
 pub mod layout2;
-mod utils;
+pub mod utils;
 
 use fastlink_core::types::err::{ErrorCode, MyError, MyResult};
 

@@ -7,7 +7,9 @@ use crate::{
 };
 use crate::{ErrorCode, MyError, MyResult};
 #[cfg(feature = "keep-layout")]
-use desktop_layout::handler::{restore_desktop_layout_by_path, store_cur_layout_to_path};
+use desktop_layout::handler::{
+    restore_desktop_layout_by_deskdir_from_appdata, store_cur_layout_by_deskdir_to_appdata,
+};
 
 use fastlink_core::utils::fs::mk_parents;
 
@@ -73,7 +75,7 @@ pub fn handle_desktop_set(
         #[cfg(feature = "keep-layout")]
         let last_layout = {
             log::debug!("开始保存当前desktop layout");
-            let layout = store_cur_layout_to_path(&cur_target)
+            let layout = store_cur_layout_by_deskdir_to_appdata(&cur_target)
                 .inspect_err(|e| {
                     log::debug!("保存当前desktop layout失败：{}", e);
                 })
@@ -109,7 +111,10 @@ pub fn handle_desktop_set(
             handle_fresh_desktop_force();
             log::debug!("开始加载新desktop的layout");
 
-            let _ = restore_desktop_layout_by_path(&new_desktop_path, last_layout.as_ref())
+            let _ = restore_desktop_layout_by_deskdir_from_appdata(
+                &new_desktop_path,
+                last_layout.as_ref(),
+            )
                 .inspect_err(|e| {
                     log::debug!("加载新desktop的layout失败：{}", e);
                 })

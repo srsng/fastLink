@@ -64,7 +64,7 @@ impl IconLayout {
     /// 过滤，以icon的name为key，对两个layout求交集：过滤掉在self但不在another的 icon name,
     ///
     /// 返回过滤后的 Vec<&IconEntry> 以及name映射到self原始idx的HashMap
-    pub fn filter(&mut self, another: &IconLayout) -> (Vec<&IconEntry>, HashMap<&String, usize>) {
+    pub fn filter(&self, another: &IconLayout) -> (Vec<&IconEntry>, HashMap<&String, usize>) {
         let old_names: HashSet<&String> = another.entries.iter().map(|e| &e.name).collect();
 
         // 以icon的name为key，对两个layout求交集：过滤掉在self但不在another的 icon name, 并记录 idx

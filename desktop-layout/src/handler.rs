@@ -2,8 +2,9 @@ use crate::layout::{read_layout_from_path, IconLayout};
 use crate::layout2::set_icon_layout;
 use crate::utils::get_layout_data_file_path;
 use crate::{ErrorCode, MyError, MyResult};
-use encoding_rs::GBK;
 use fastlink_core::utils::fs::mk_parents;
+
+use encoding_rs::GBK;
 
 use std::fs::File;
 use std::io::Write;
@@ -65,17 +66,26 @@ pub fn get_cur_layout() -> MyResult<IconLayout> {
 }
 
 /// 保存当前桌面的布局到文件
-pub fn store_cur_layout_to_path<P: AsRef<Path>>(path: P) -> MyResult<IconLayout> {
+pub fn store_cur_layout_by_deskdir_to_appdata<P: AsRef<Path>>(desk_dir: P) -> MyResult<IconLayout> {
     // 1. 使用python打包二进制，得到stdout: &str
     // 2. 解析dsv格式
     // 3. 保存到文件
-    log::debug!("获取当前desktop layout中");
+    let path = get_layout_data_file_path(desk_dir, None)?;
+    store_cur_layout_to_dsv(path)
+}
+
+/// 直接调用`get_cur_layout`获取layout数据并保存到path
+pub fn store_cur_layout_to_dsv<P: AsRef<Path>>(path: P) -> MyResult<IconLayout> {
     let layout = get_cur_layout()?;
-    let path = get_layout_data_file_path(path)?;
     layout.dump(path)?;
     Ok(layout)
 }
 
+/// 抗拒加载新桌面产生的延迟，加载真正新桌面的布局
+///
+/// 最多`GET_NEW_LAYOUT_MAX_RETRY`次，每次延迟80ms
+///
+/// 注：使用` std::thread::spawn`多线程可能有未知原因阻塞/阻止桌面刷新
 pub fn get_new_layout(last_layout: Option<&IconLayout>) -> MyResult<IconLayout> {
     let mut cnt = 0;
     let null_layout = IconLayout::default();
@@ -115,33 +125,60 @@ pub fn get_new_layout(last_layout: Option<&IconLayout>) -> MyResult<IconLayout> 
     }
 }
 
-/// 指定路径，加载并应用布局
+/// 供desks应用为当前桌面恢复桌面
 ///
+/// - `desk_dir`: 当前桌面路径，自动转为 dsv文件的路径
+/// - `layout_cur`: 当前布局数据，若为None则自动使用`get_cur_layout`结果
+///
+/// # Return
 /// - Ok(true) 成功
-/// - Ok(false) 布局不存在
+/// - Ok(false) 布局文件不存在
 /// - Err(e) 出错
-pub fn restore_desktop_layout_by_path<P: AsRef<Path>>(
-    path: P,
+pub fn restore_desktop_layout_by_deskdir_from_appdata<P: AsRef<Path>>(
+    desk_dir: P,
     last_layout: Option<&IconLayout>,
 ) -> MyResult<bool> {
     // 对应到文件
-    let path = get_layout_data_file_path(path)?;
+    let dsv_path = get_layout_data_file_path(desk_dir, None)?;
     // 布局文件存在
-    if path.exists() {
+    if dsv_path.exists() {
         log::debug!("存在已有的dsv布局文件");
-        // 读取layout数据
-        let mut layout_old = read_layout_from_path(path)?;
-        log::debug!("get layout icon entries: {:?}", layout_old.entries);
         // 获取新桌面 layout_new 数据
         let layout_new: IconLayout = get_new_layout(last_layout)?;
-
-        // 过滤掉在layout_new中不在layout_old的 icon name, 并记录 idx
-        let (icons_ok, name2idx) = layout_old.filter(&layout_new);
-        set_icon_layout(&icons_ok, Some(name2idx))?;
-        Ok(true)
+        // 恢复布局
+        restore_desktop_layout_from_dsv(dsv_path, Some(layout_new))
     } else {
         Ok(false)
     }
+}
+
+/// 从文件获取布局，并替换当前布局
+///
+/// - `dsv_path`: 直接指向 dsv文件的路径
+/// - `layout_cur`: 当前布局数据，若为None则自动使用`get_cur_layout`结果
+///
+/// # Return
+/// - Ok(true) 成功
+/// - Err(e) 错误
+pub fn restore_desktop_layout_from_dsv<P: AsRef<Path>>(
+    dsv_path: P,
+    layout_cur: Option<IconLayout>,
+) -> MyResult<bool> {
+    // 获取当前布局
+    let layout_cur = if let Some(layout_cur) = layout_cur {
+        layout_cur
+    } else {
+        get_cur_layout()?
+    };
+    // 从dsv读取新layout
+    let layout_load = read_layout_from_path(dsv_path)?;
+    log::debug!("get layout icon entries: {:?}", layout_load.entries);
+
+    // 过滤加载布局中不存在的icon, 获取name到原始idx的map
+    let (icons_ok, name2idx) = layout_load.filter(&layout_cur);
+    // 设置layout
+    set_icon_layout(&icons_ok, Some(name2idx))?;
+    Ok(true)
 }
 
 // #[cfg(test)]
