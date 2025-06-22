@@ -1,5 +1,7 @@
+use crate::{layout::IconEntry, win_err_to_myerr};
 use fastlink_core::types::err::MyResult;
 use std::collections::HashMap;
+
 use windows::{
     core::{w, PCWSTR},
     Win32::{
@@ -12,7 +14,29 @@ use windows::{
     },
 };
 
-use crate::{layout::IconEntry, win_err_to_myerr};
+#[cfg(feature = "system-com")]
+use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
+
+#[cfg(feature = "system-com")]
+struct ComGuard;
+#[cfg(feature = "system-com")]
+impl ComGuard {
+    pub fn new() -> Option<Self> {
+        let res = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+        if res.is_err() {
+            log::debug!("fail to CoInitializeEx");
+            None
+        } else {
+            Some(ComGuard {})
+        }
+    }
+}
+#[cfg(feature = "system-com")]
+impl Drop for ComGuard {
+    fn drop(&mut self) {
+        unsafe { CoUninitialize() };
+    }
+}
 
 /// 使用桌面 ListView 句柄获取桌面图标数量
 fn get_item_count(hwnd_sys_list_view32: HWND) -> isize {
@@ -27,7 +51,7 @@ fn get_item_count(hwnd_sys_list_view32: HWND) -> isize {
     }
 }
 
-pub fn totally_fersh() -> windows::core::Result<()> {
+pub fn totally_fresh() -> windows::core::Result<()> {
     let hwnd_sys_list_view32 = get_desktop_listview()?;
     redraw_items(hwnd_sys_list_view32);
     #[cfg(feature = "update-window")]
@@ -74,15 +98,6 @@ fn set_icon_pos(hwnd_sys_list_view32: HWND, idx: usize, point: (i32, i32)) -> bo
 /// C/C++ 参考： https://www.cnblogs.com/marszhw/p/11087886.html
 pub fn get_desktop_listview() -> windows::core::Result<HWND> {
     unsafe {
-        #[cfg(feature = "system-com")]
-        {
-            use windows::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
-
-            let res = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-            if res.is_err() {
-                log::debug!("fail to CoInitializeEx");
-            }
-        }
         // 获取 Program 句柄
         // A
         // let window = w!("Program Manager");

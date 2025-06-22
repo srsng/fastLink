@@ -1,6 +1,6 @@
 use crate::{ErrorCode, MyError, MyResult};
 use chrono::Local;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -58,15 +58,16 @@ impl IconLayout {
         let mut file = File::create(&path)
             .map_err(|e| MyError::new(ErrorCode::IoError, format!("创建桌面布局文件失败: {e}")))?;
         file.write_all(formatted.as_bytes())
-            .map_err(|e| MyError::new(ErrorCode::IoError, format!("写入桌面布局文件失败: {e}")))?;
-        Ok(())
+            .map_err(|e| MyError::new(ErrorCode::IoError, format!("写入桌面布局文件失败: {e}")))
     }
 
-    /// 过滤，返回过滤后的 IconEntry借用向量，以及name映射到原始idx的HashMap
-    pub fn filter(&mut self, layout: &IconLayout) -> (Vec<&IconEntry>, HashMap<&String, usize>) {
-        let old_names: Vec<&String> = layout.entries.iter().map(|e| &e.name).collect();
+    /// 过滤，以icon的name为key，对两个layout求交集：过滤掉在self但不在another的 icon name,
+    ///
+    /// 返回过滤后的 Vec<&IconEntry> 以及name映射到self原始idx的HashMap
+    pub fn filter(&mut self, another: &IconLayout) -> (Vec<&IconEntry>, HashMap<&String, usize>) {
+        let old_names: HashSet<&String> = another.entries.iter().map(|e| &e.name).collect();
 
-        // 过滤掉在self但不在另一layout的 icon name, 并记录 idx
+        // 以icon的name为key，对两个layout求交集：过滤掉在self但不在another的 icon name, 并记录 idx
         let mut name2idx: HashMap<&String, usize> = HashMap::new();
         for (i, e) in self.entries.iter().enumerate() {
             if old_names.contains(&&e.name) {

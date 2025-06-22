@@ -33,7 +33,10 @@ features = [
 
 default= [
     # "update-window"
+    # "system-com"
 ]
 
+# 只包含一个 update_window 函数
 update-window = ["windows/Win32_Graphics_Gdi"]
+# 包含一些使用 windows COM组件 的函数与结构体
 system-com = ["windows/Win32_System_Com"]
