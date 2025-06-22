@@ -28,6 +28,7 @@ pub fn msgbox_warn(message: String) {
 }
 
 /// 显示信息弹窗
+#[allow(unused)]
 pub fn msgbox_info(message: String) {
     unsafe {
         let wide: Vec<u16> = message.encode_utf16().chain(std::iter::once(0)).collect();

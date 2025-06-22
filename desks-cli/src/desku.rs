@@ -23,6 +23,6 @@ fn main() {
     }
 }
 
-fn handle_desktop_setter(args: Args) -> MyResult<()> {
-    handle_desktop_usual_setby(args.name)
+fn handle_desktop_setter(args: Args) -> MyResult<bool> {
+    handle_desktop_usual_setby(&args.name)
 }
