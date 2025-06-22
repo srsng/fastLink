@@ -5,7 +5,7 @@ use crate::{state::DESKTOP_STATE, utils::func::get_temp_path, utils::rollback::T
 use crate::{ErrorCode, MyError, MyResult};
 use fastlink_core::utils::path::get_path_type;
 
-pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
+pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<bool> {
     log::debug!("handle_desktop_reset");
     let (initial_path, initial_path_temp, cur_target) = {
         let state = DESKTOP_STATE.state_mut();
@@ -20,7 +20,7 @@ pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
     // 两路径都为空
     if initial_path.is_none() && initial_path_temp.is_none() {
         log::warn!("未经过初始化");
-        Ok(())
+        Ok(false)
     // 有一个非空，一个空
     } else if initial_path.is_none() || initial_path_temp.is_none() {
         Err(MyError::new(
@@ -54,7 +54,7 @@ pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
             log::info!("重置成功");
             handle_fresh_desktop();
             log::info!("桌面已刷新");
-            Ok(())
+            Ok(true)
         // 或者当initial_path_temp存在且为目录，initial_path不存在时 (其他情况`1`)
         } else if initial_path_temp_status.code == ErrorCode::TargetExistsAndNotLink
             && initial_path_temp.is_dir()
@@ -69,7 +69,7 @@ pub fn handle_desktop_reset(keep_usual_paths: Option<bool>) -> MyResult<()> {
             log::info!("重置成功");
             handle_fresh_desktop();
             log::info!("桌面已刷新");
-            Ok(())
+            Ok(true)
         } else {
             Err(MyError::new(
                 ErrorCode::Unknown,

@@ -5,7 +5,7 @@ use crate::{ErrorCode, MyError, MyResult};
 use fastlink_core::utils::path::get_path_type;
 use std::path::PathBuf;
 
-pub fn handle_desktop_init() -> MyResult<()> {
+pub fn handle_desktop_init() -> MyResult<bool> {
     // 获取当前Desktop库路径
     let desktop = get_original_desktop_path().map_err(|mut e| {
         e.msg = format!("获取当前Desktop库位置失败：{}", e.msg);
@@ -40,7 +40,7 @@ pub fn handle_desktop_init() -> MyResult<()> {
             DESKTOP_STATE.save()?;
         }
         log::info!("初始化成功");
-        Ok(())
+        Ok(true)
     // desktop不为目录
     } else if desktop_status.code == ErrorCode::TargetExistsAndNotLink && !desktop.is_dir() {
         Err(MyError::new(
@@ -79,7 +79,7 @@ pub fn handle_desktop_init() -> MyResult<()> {
             log::info!("已初始化，无需重复操作，若需重置，使用reset命令");
         }
 
-        Ok(())
+        Ok(false)
     } else {
         log::warn!(
             "意外情况: \n{}\n{}\n{}\n{}",

@@ -13,12 +13,15 @@ use desktop_layout::handler::{
 
 use fastlink_core::utils::fs::mk_parents;
 
+/// 处理设置桌面
+///
+/// - Ok(fasle) 表示跳过
 pub fn handle_desktop_set(
     new_desktop_dir_path: PathBuf,
     make_dir: bool,
     // overwrite_links: bool,
     usual: Option<String>,
-) -> MyResult<()> {
+) -> MyResult<bool> {
     log::debug!("handle_desktop_set");
     // 经过validate_new_desktop_dir_path处理, 保证是目录或指向目录的符号链接
     let new_desktop_path: PathBuf = new_desktop_dir_path;
@@ -35,7 +38,7 @@ pub fn handle_desktop_set(
     // 当新desktop与目前desktop为同一个时，跳过
     if cur_target.is_some() && Some(new_desktop_path.clone()) == cur_target {
         log::debug!("新desktop与当前相同");
-        return Ok(());
+        return Ok(false);
     }
 
     if cur_path.is_none() {
@@ -115,19 +118,19 @@ pub fn handle_desktop_set(
                 &new_desktop_path,
                 last_layout.as_ref(),
             )
-                .inspect_err(|e| {
-                    log::debug!("加载新desktop的layout失败：{}", e);
-                })
-                .map(|b| {
-                    log::debug!("加载新desktop的layout: {}", b);
-                });
+            .inspect_err(|e| {
+                log::debug!("加载新desktop的layout失败：{}", e);
+            })
+            .map(|b| {
+                log::debug!("加载新desktop的layout: {}", b);
+            });
             // })
             1
         };
         // #[cfg(feature = "keep-layout")]
         // let _res = task.join();
         log::info!("桌面已刷新");
-        Ok(())
+        Ok(true)
     }
     // Ok(())
 }

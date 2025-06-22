@@ -19,7 +19,8 @@ const MAIN_SEPARATOR: char = std::path::MAIN_SEPARATOR;
 ///
 /// 不满足则会返回对应的ErrorCode
 /// （没有返回Ok的条件，但在后续处理FileNotExists就是Ok）
-pub fn mklink_pre_check(path: &Path) -> Result<(), MyError> {
+pub fn mklink_pre_check<P: AsRef<Path>>(path: P) -> Result<(), MyError> {
+    let path = path.as_ref();
     // 读取元数据
     match std::fs::symlink_metadata(path) {
         // 路径存在且读取成功

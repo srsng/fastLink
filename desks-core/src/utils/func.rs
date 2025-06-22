@@ -1,6 +1,7 @@
 use crate::{ErrorCode, MyError, MyResult};
-use std::env;
+use fastlink_core::utils::path::get_path_type;
 use std::path::{Path, PathBuf};
+use std::{env, fs};
 use winreg::enums::*;
 use winreg::RegKey;
 
@@ -55,6 +56,41 @@ pub fn get_original_desktop_path() -> MyResult<PathBuf> {
     parse_env_vars(desktop)
 }
 
+/// 获取当前实际桌面的目标路径, 不经过桌面状态数据文件
+pub fn get_real_desktop_path() -> MyResult<PathBuf> {
+    let desktop = get_original_desktop_path_string()?;
+    let path = parse_env_vars(desktop)?;
+
+    let path_status = get_path_type(&path).err().unwrap();
+    match path_status.code {
+        // 是目录
+        ErrorCode::TargetExistsAndNotLink => {
+            if path.is_dir() {
+                Ok(path)
+            } else {
+                Err(MyError::new(
+                    ErrorCode::Unknown,
+                    "当前桌面是一个文件".into(),
+                ))
+            }
+        }
+        // 是符号链接
+        ErrorCode::TargetLinkExists => {
+            if path.is_dir() {
+                let target = fs::read_link(path)
+                    .map_err(|e| MyError::new(ErrorCode::Unknown, format!("{e}")))?;
+                Ok(target)
+            } else {
+                Err(MyError::new(
+                    ErrorCode::Unknown,
+                    "当前桌面指向一个文件".into(),
+                ))
+            }
+        }
+        _ => Err(path_status),
+    }
+}
+
 /// 获取存放在注册表中的Desktop库路径String
 fn get_original_desktop_path_string() -> MyResult<String> {
     let hklm = RegKey::predef(HKEY_CURRENT_USER);
@@ -67,6 +103,7 @@ fn get_original_desktop_path_string() -> MyResult<String> {
     Ok(desktop_path)
 }
 
+/// 查找并替换字符串中的环境变量占位符
 pub fn parse_env_vars(path: String) -> MyResult<PathBuf> {
     let replacements = match_env_placeholders(&path)?;
     let result = apply_replacements(path, replacements);

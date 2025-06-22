@@ -27,7 +27,7 @@ fn main() {
     }
 }
 
-fn handle_desktop_setter(args: Args) -> MyResult<()> {
+fn handle_desktop_setter(args: Args) -> MyResult<bool> {
     match args.command {
         Commands::Init => handle_desktop_init(),
         Commands::Reset { keep_usual_paths } => handle_desktop_reset(Some(keep_usual_paths)),
@@ -38,7 +38,7 @@ fn handle_desktop_setter(args: Args) -> MyResult<()> {
         } => handle_desktop_set(new_desktop_dir_path, make_dir, usual),
         Commands::State => handle_desktop_state(),
         Commands::Original => handle_desktop_origin(),
-        Commands::Usual { name } => handle_desktop_usual_setby(name),
-        Commands::DelUsual { name } => handle_desktop_usual_del(name),
+        Commands::Usual { name } => handle_desktop_usual_setby(&name),
+        Commands::DelUsual { name } => handle_desktop_usual_del(&name),
     }
 }

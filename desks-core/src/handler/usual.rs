@@ -4,10 +4,10 @@ use crate::{
 };
 use crate::{ErrorCode, MyError, MyResult};
 
-pub fn handle_desktop_usual_setby(name: String) -> MyResult<()> {
+pub fn handle_desktop_usual_setby(name: &String) -> MyResult<bool> {
     let usual_paths = { DESKTOP_STATE.state().usual_paths.clone() };
-    if usual_paths.contains_key(&name) {
-        handle_desktop_set(usual_paths[&name].clone(), false, None)
+    if usual_paths.contains_key(name) {
+        handle_desktop_set(usual_paths[name].clone(), false, None)
     } else {
         handle_desktop_state()?;
         Err(MyError::new(
@@ -17,9 +17,9 @@ pub fn handle_desktop_usual_setby(name: String) -> MyResult<()> {
     }
 }
 
-pub fn handle_desktop_usual_del(name: String) -> MyResult<()> {
+pub fn handle_desktop_usual_del(name: &String) -> MyResult<bool> {
     let res = {
-        let res = DESKTOP_STATE.del_usual_path_by_name(&name);
+        let res = DESKTOP_STATE.del_usual_path_by_name(name);
         let b = res.is_some();
         if let Some(path) = res {
             DESKTOP_STATE.save()?;
@@ -29,7 +29,7 @@ pub fn handle_desktop_usual_del(name: String) -> MyResult<()> {
     };
 
     if res {
-        Ok(())
+        Ok(true)
     } else {
         handle_desktop_state()?;
         Err(MyError::new(
