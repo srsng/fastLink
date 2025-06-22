@@ -68,7 +68,7 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 已经运行的desks-tray不会反复读取desks系列共用的状态文件，desks修改状态文件desks-tray不会即时相应，需要重启
 
-托盘最多显示10个快捷名称/常用路径, 托盘菜蛋右侧的快捷键暂不可用
+托盘最多显示10个快捷名称/常用路径, 托盘菜单右侧的快捷键暂不可用
 
 [desks-tray usage](./desks-tray/README.md#usage)
 
@@ -83,7 +83,7 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 ## Feedback
 如果发生了一些预期之外的问题，提个issue，记得贴上带`--debug`参数时的日志。
 
-If something not excepet happened, open an issue and paste the log wiht `--debug` argument.  
+If something not expected happened, open an issue and paste the log with `--debug` argument.  
 
 
 如果是`desks`系列程序(desks, desku, desks-tray)，还需要使用`desks state`， 并使用`fastlink -c $initial_path$`与`fastlink -c $initial_path_temp$`

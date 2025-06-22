@@ -47,10 +47,10 @@ pub fn setup_keep_layout(
     let submenu = submenu.unwrap_or(false);
 
     // 初始化items
-    let kl_item1 = MenuItem::new("打开dsv文件以恢复布局&C", true, None);
+    let kl_item1 = MenuItem::new("从文件恢复布局...", true, None);
     let kl_item2 = MenuItem::new("快速备份布局", true, None);
-    let kl_item3 = MenuItem::new("保存布局dsv文件到...", true, None);
-    let kl_item4 = MenuItem::new("打开备份布局文件以恢复", true, None);
+    let kl_item3 = MenuItem::new("保存布局到...", true, None);
+    let kl_item4 = MenuItem::new("从备份中恢复布局", true, None);
 
     // 初始化handlers
     let mut keep_layout_id2handler: HashMap<String, fn() -> MyResult<bool>> = HashMap::new();
