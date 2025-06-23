@@ -577,6 +577,7 @@ dependencies = [
  "desktop-layout",
  "dirs",
  "fastlink-core",
+ "indexmap",
  "lazy_static",
  "log",
  "once_cell",
@@ -1419,6 +1420,7 @@ checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
