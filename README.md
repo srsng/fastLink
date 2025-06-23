@@ -94,11 +94,11 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 [desks-help](./desks-cli/README.md#desks-help)
 
 ## desks-tray
-相当于`desku`的托盘版本，但多一个original，且使用更方便
+不只是desku的托盘版本，支持手动保存（备份）、恢复桌面布局。
 
 已经运行的desks-tray不会反复读取desks系列共用的状态文件，desks修改状态文件desks-tray不会即时相应，需要重启
 
-托盘最多显示10个快捷名称/常用路径, 托盘菜单右侧的快捷键暂不可用
+托盘最多显示10个快捷名称/常用路径, 托盘菜蛋右侧的快捷键暂不可用
 
 [desks-tray usage](./desks-tray/README.md#usage)
 
