@@ -47,22 +47,33 @@ pub fn setup_keep_layout(
     let submenu = submenu.unwrap_or(false);
 
     // 初始化items
-    let kl_item1 = MenuItem::new("从文件恢复布局...", true, None);
-    let kl_item2 = MenuItem::new("快速备份布局", true, None);
-    let kl_item3 = MenuItem::new("保存布局到...", true, None);
-    let kl_item4 = MenuItem::new("从备份中恢复布局", true, None);
+    let kl_item_quick_backup = MenuItem::new("快速备份布局", true, None);
+    let kl_item_store_to = MenuItem::new("保存布局到...", true, None);
+    let kl_item_restore_from_file = MenuItem::new("从文件恢复布局...", true, None);
+    let kl_item_restore_from_backup = MenuItem::new("从备份中恢复布局", true, None);
 
     // 初始化handlers
     let mut keep_layout_id2handler: HashMap<String, fn() -> MyResult<bool>> = HashMap::new();
-    keep_layout_id2handler.insert(kl_item1.id().0.clone(), handle_ask_restore_layout_from_dsv);
-    keep_layout_id2handler.insert(kl_item2.id().0.clone(), handle_quick_bakcup_cur_layout);
-    keep_layout_id2handler.insert(kl_item3.id().0.clone(), handle_ask_save_layout_to);
     keep_layout_id2handler.insert(
-        kl_item4.id().0.clone(),
+        kl_item_restore_from_file.id().0.clone(),
+        handle_ask_restore_layout_from_dsv,
+    );
+    keep_layout_id2handler.insert(
+        kl_item_quick_backup.id().0.clone(),
+        handle_quick_bakcup_cur_layout,
+    );
+    keep_layout_id2handler.insert(kl_item_store_to.id().0.clone(), handle_ask_save_layout_to);
+    keep_layout_id2handler.insert(
+        kl_item_restore_from_backup.id().0.clone(),
         handle_ask_restore_layout_at_backup_dir,
     );
 
-    let items = vec![kl_item1, kl_item2, kl_item3, kl_item4];
+    let items = vec![
+        kl_item_store_to,
+        kl_item_quick_backup,
+        kl_item_restore_from_file,
+        kl_item_restore_from_backup,
+    ];
 
     // 加入菜单项
     if submenu {
