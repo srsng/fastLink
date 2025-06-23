@@ -7,7 +7,7 @@ license = "Apache-2.0"
 build = "build.rs"
 
 [dependencies]
-fastlink-core = { path = "../fastlink-core", features = [] }
+fastlink-core = { path = "../fastlink-core", features = ["save-log"] }
 desks-core = { path = "../desks-core", features = [] }
 desktop-layout = { path = "../desktop-layout", optional = true }
 log = "0.4.27"
