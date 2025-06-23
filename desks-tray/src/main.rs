@@ -12,8 +12,8 @@ use crate::{
 };
 
 use desks_core::handler::{original::handle_desktop_origin, usual::handle_desktop_usual_setby};
-use fastlink_core::types::err::MyResult;
 use fastlink_core::utils::logs::LogIniter;
+use fastlink_core::{types::err::MyResult, utils::fs::mk_parents};
 
 use tao::{
     event::{Event, WindowEvent},
@@ -26,11 +26,8 @@ use tray_icon::{
 
 fn main() -> anyhow::Result<()> {
     // 初始化日志
-    #[cfg(not(debug_assertions))]
-    let debug = false;
-    #[cfg(debug_assertions)]
     let debug = true;
-    let save_log = None;
+    let save_log = Some(get_log_path());
     LogIniter::new(false, debug, save_log).init();
 
     let instance = single_instance::SingleInstance::new("desks-tray").unwrap();
@@ -136,6 +133,22 @@ fn handle_result<T: std::fmt::Debug>(res: MyResult<T>) -> Option<T> {
         log::debug!("{:?}", ok_);
         Some(ok_)
     }
+}
+
+/// 获取日志路径
+fn get_log_path() -> String {
+    let timestamp = chrono::Local::now().format("%y-%m-%d-%H-%M-%S");
+    let file_name = format!("desks-tray-log-{}.txt", timestamp);
+    dirs::config_dir()
+        .map(|p| {
+            let p = p.join(r"fastlink\desktop_setter\log").join(file_name);
+            mk_parents(&p).expect("无法创建配置文件目标目录");
+            p
+        })
+        .expect("无法确定配置目录")
+        .to_str()
+        .expect("无效的配置路径")
+        .to_string()
 }
 
 // 自定义用户事件类型

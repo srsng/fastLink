@@ -16,6 +16,8 @@ anyhow = { version = "1.0.98" }
 tray-icon = { version = "0.20.1" }
 single-instance = "0.3.3"
 rfd = { version = "0.15.3", optional = true }
+dirs = "6.0.0"
+chrono = "0.4.41"
 
 [dependencies.windows]
 version = "0.61.3"

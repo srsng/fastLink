@@ -591,8 +591,10 @@ name = "desks-tray"
 version = "0.3.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "desks-core",
  "desktop-layout",
+ "dirs",
  "embed-resource",
  "fastlink-core",
  "log",
