@@ -1,7 +1,7 @@
 use fastlink_core::utils::fs::mk_parents;
+use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, Error, Write};
@@ -74,7 +74,7 @@ pub struct DesktopState {
     pub initial_path_temp: Option<PathBuf>,
     pub cur_path: Option<PathBuf>,
     pub cur_target: Option<PathBuf>,
-    pub usual_paths: HashMap<String, PathBuf>,
+    pub usual_paths: IndexMap<String, PathBuf>,
 }
 
 impl DesktopState {
@@ -150,7 +150,7 @@ impl AutoSaveState {
     pub fn del_usual_path_by_name(&self, name: &String) -> Option<PathBuf> {
         let mut state = self.state_mut();
 
-        state.usual_paths.remove(name)
+        state.usual_paths.shift_remove(name)
     }
 
     pub fn reset(&self, keep_usual_paths: Option<bool>) {
@@ -161,7 +161,7 @@ impl AutoSaveState {
         state.cur_target = None;
 
         if !keep_usual_paths.unwrap_or(false) {
-            state.usual_paths = HashMap::new();
+            state.usual_paths.clear();
         }
     }
 }
@@ -217,7 +217,7 @@ impl fmt::Display for DesktopState {
         // 处理 usual_paths 字段
         writeln!(f, "\n常用快捷名称-路径(usual_paths):")?;
         if self.usual_paths.is_empty() {
-            writeln!(f, "    空，使用set目录携带参数-u添加")?;
+            writeln!(f, "    空\n    使用set目录携带参数-u添加")?;
         } else {
             // 找到最长的键的长度
             // let max_key_len = self.usual_paths.keys().map(|k| k.len()).max().unwrap_or(0);
