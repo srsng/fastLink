@@ -81,26 +81,23 @@ Do not need `sudo` or `administrator` if Developer Mode enabled.
 
 ## desks-core
 
-**desks**系列(desks, desku, desks-tray)的核心，主要定义了一些处理方法以及一个状态数据文件。
-
+**desks**系列(desks, desku, desks-tray)的核心，主要定义了一些处理方法以及一个共享的状态数据文件。
 
 ## desks-cli
-包含两个二进制`desks`与`desku`，均为命令行工具。
+desks-core的一些封装，包含两个二进制`desks`与`desku`，均为命令行工具。
 
-`desks` 目前是desks系列的唯一的全功能程序，包含初始化、设置桌面、添加常用路径、重置等。
+`desks` 目前是desks系列的核心程序，包含初始化、设置桌面、添加常用路径、重置等，但不包括桌面布局管理等功能。
 
-`desku` 只能通过以设置的常用路径来设置桌面，等效`desks u some_name`（就是为了省2个字）
+`desku` 只能通过以设置的常用路径来设置桌面，等效`desks u some_name`（就是为了省2个字）（更推荐使用`desks-tray`）
 
 [desks-help](./desks-cli/README.md#desks-help)
 
 ## desks-tray
-不只是desku的托盘版本，支持手动保存（备份）、恢复桌面布局。
+desks系列的托盘程序，主要用于日常方便切换桌面，同时包含桌面布局保存、恢复功能。
 
-已经运行的desks-tray不会反复读取desks系列共用的状态文件，desks修改状态文件desks-tray不会即时相应，需要重启
+![desks-tray-eg-img](./image/README/desks-tray-eg-img.png)
 
-托盘最多显示10个快捷名称/常用路径, 托盘菜蛋右侧的快捷键暂不可用
-
-[desks-tray usage](./desks-tray/README.md#usage)
+[desks-tray details](./desks-tray/README.md)
 
 ## desktop-layout
 
@@ -126,4 +123,6 @@ If something not expected happened, open an issue and paste the log with `--debu
 如果是`desks`系列程序(desks, desku, desks-tray)，还需要使用`desks state`， 并使用`fastlink -c $initial_path$`与`fastlink -c $initial_path_temp$`
 （手动替换$initial_path$与$initial_path_temp$），将返回信息一并提交到issue内
 
-注：若无法使用`desks state`, 请使用全局搜索工具如`everything`搜索路径`fastlink\desktop_setter\state.json`获取程序状态
+注：若无法使用`desks state`, 请使用全局搜索工具如`everything`搜索路径`fastlink\desktop_setter\state.json`获取程序状态, 
+
+对于desks-tray, 日志在`fastlink\desktop_setter\log`中保存。
