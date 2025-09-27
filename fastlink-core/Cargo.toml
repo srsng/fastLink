@@ -17,7 +17,6 @@ env_logger = { version = "0.11.8" }
 lazy_static = "1.5.0"
 log = "0.4.27"
 path-clean = "1.0.1"
-strip-ansi-escapes = { version = "0.2.1", optional = true }
 walkdir = { version = "2.5.0", optional = true }
 
 [dependencies.regex]
@@ -32,5 +31,5 @@ tempfile = "3.20.0"
 [features]
 default = []
 
-save-log = ["dep:strip-ansi-escapes"]
+save-log = []
 fastlink-regex = ["dep:regex", "dep:walkdir"]

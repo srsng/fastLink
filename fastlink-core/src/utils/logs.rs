@@ -38,13 +38,11 @@ impl MultiWriter {
 #[cfg(feature = "save-log")]
 impl Write for MultiWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        use strip_ansi_escapes;
         // 写入 stdout
         let stdout_result = self.stdout.write(buf);
 
-        // 去除 ANSI 颜色代码后写入文件
-        let plain_text = strip_ansi_escapes::strip(buf);
-        let file_result = self.file.lock().unwrap().write(&plain_text);
+        // 写入文件
+        let file_result = self.file.lock().unwrap().write(buf);
 
         // 返回 stdout 的写入字节数（优先考虑 stdout 的成功写入）
         stdout_result.or(file_result)
@@ -90,7 +88,7 @@ impl LogIniter {
                 Ok(path) => path,
                 Err(e) => {
                     log::warn!("日志路径解析失败: {}, 将使用默认路径", e);
-                    default_log_path()
+                    default_log_path(None)
                 }
             };
 
@@ -192,7 +190,8 @@ fn parse_save_path(save_log: &str) -> Result<PathBuf, MyError> {
 }
 
 #[cfg(feature = "save-log")]
-fn default_log_path() -> PathBuf {
+fn default_log_path(name: Option<String>) -> PathBuf {
     let timestamp = chrono::Local::now().format("%y-%m-%d-%H-%M-%S");
-    crate::WORK_DIR.join(format!("fastlink-{}.log", timestamp))
+    let name = name.unwrap_or("fastlink".to_string());
+    crate::WORK_DIR.join(format!("{name}-{}.log", timestamp))
 }
